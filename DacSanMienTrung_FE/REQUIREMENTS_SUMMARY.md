@@ -1,0 +1,5 @@
+- Website bán đặc sản miền Trung
+- Vai trò: Khách hàng, Nhân viên, Quản trị viên
+- Chức năng khách hàng: xem sản phẩm, lọc, giỏ hàng, đặt hàng, thanh toán, combo, blog, lịch sử đơn hàng, hoàn hàng
+- Chức năng nhân viên: quản lý sản phẩm, đơn hàng, tồn kho, hoàn hàng, đánh giá, blog
+- Chức năng admin: quản lý tài khoản, voucher, báo cáo

@@ -1,0 +1,40 @@
+import type { Product } from "./ProductCard";
+
+const unsplash = {
+  bracelet: "https://images.unsplash.com/photo-1767040178309-680261a622af?w=600&q=80",
+  riceCracker: "https://images.unsplash.com/photo-1604462513073-ac805f9a642f?w=600&q=80",
+  sauceJar: "https://images.unsplash.com/photo-1550167531-5b32d1a9b512?w=600&q=80",
+  oilBottle: "https://images.unsplash.com/photo-1596470663178-dc2df28026f7?w=600&q=80",
+  oilBottle2: "https://images.unsplash.com/photo-1693567397897-61ea5c665078?w=600&q=80",
+  dried: "https://images.unsplash.com/photo-1554367028-76d3d8711196?w=600&q=80",
+  tray: "https://images.unsplash.com/photo-1658218615057-31280b03746c?w=600&q=80",
+  hanging: "https://images.unsplash.com/photo-1719671703378-1e974a1fdb9d?w=600&q=80",
+  spices: "https://images.unsplash.com/photo-1558615072-e2874b48958e?w=600&q=80",
+  noodle: "https://images.unsplash.com/photo-1583316175701-0bc5f25a0a44?w=600&q=80",
+  fish: "https://images.unsplash.com/photo-1772285337950-82b3bc190b30?w=600&q=80",
+  teabox: "https://images.unsplash.com/photo-1695286060321-208108885bc5?w=600&q=80",
+  giftbox: "https://images.unsplash.com/photo-1695916106317-87cfb79fb25f?w=600&q=80",
+  pastry: "https://images.unsplash.com/flagged/photo-1560479072-47aceb8ad74a?w=600&q=80",
+  cookies: "https://images.unsplash.com/photo-1719787770233-f96fead3c4f3?w=600&q=80",
+  beads: "https://images.unsplash.com/photo-1760726744405-b955b568ba3e?w=600&q=80",
+};
+
+export const products: Product[] = [
+  { id: "1", name: "Vòng Tay Đá Phong Thủy Hoa Cúc", image: unsplash.bracelet, province: "Huế", price: 185000, originalPrice: 250000, rating: 4.8, reviews: 142, isBestSeller: true },
+  { id: "2", name: "Bánh Tráng Cuốn Đà Nẵng - Đặc Sản Trứng Chiên", image: unsplash.riceCracker, province: "Đà Nẵng", price: 65000, originalPrice: 80000, rating: 4.9, reviews: 328, isBestSeller: true },
+  { id: "3", name: "Mắm Ruốc Dì Cẩn - Chính Gốc Đà Nẵng", image: unsplash.sauceJar, province: "Đà Nẵng", price: 95000, rating: 4.7, reviews: 215, isBestSeller: true },
+  { id: "4", name: "Tinh Dầu Sả Chanh Nguyên Chất 100ml", image: unsplash.oilBottle, province: "Quảng Nam", price: 120000, originalPrice: 150000, rating: 4.9, reviews: 96, isNew: true },
+  { id: "5", name: "Kẹo Mè Xửng Huế Thượng Hạng", image: unsplash.pastry, province: "Huế", price: 75000, rating: 4.8, reviews: 204, isBestSeller: true },
+  { id: "6", name: "Hộp Quà Trà Cung Đình Huế", image: unsplash.teabox, province: "Huế", price: 320000, originalPrice: 400000, rating: 4.9, reviews: 58, isNew: true },
+  { id: "7", name: "Cá Khô Nha Trang Đặc Sản Biển", image: unsplash.fish, province: "Nha Trang", price: 155000, rating: 4.7, reviews: 183, isBestSeller: true },
+  { id: "8", name: "Tiêu Xanh Quảng Trị Rang Khô", image: unsplash.spices, province: "Quảng Ngãi", price: 85000, rating: 4.6, reviews: 72, isNew: true },
+  { id: "9", name: "Bánh In Cố Đô - Hộp Đặc Biệt", image: unsplash.cookies, province: "Huế", price: 110000, originalPrice: 135000, rating: 4.7, reviews: 89, isNew: true },
+  { id: "10", name: "Mực Khô Một Nắng Phan Thiết", image: unsplash.hanging, province: "Bình Định", price: 280000, rating: 4.9, reviews: 267, isBestSeller: true },
+  { id: "11", name: "Hộp Bánh Đậu Xanh Cao Cấp", image: unsplash.dried, province: "Quảng Nam", price: 145000, rating: 4.8, reviews: 134, isNew: true },
+  { id: "12", name: "Combo Đặc Sản Huế - Hộp Quà Tết", image: unsplash.giftbox, province: "Huế", price: 590000, originalPrice: 750000, rating: 5.0, reviews: 48, isBestSeller: true },
+  { id: "13", name: "Mì Quảng Khô Ăn Liền - Quảng Nam", image: unsplash.noodle, province: "Quảng Nam", price: 55000, rating: 4.6, reviews: 156, isNew: true },
+  { id: "14", name: "Tinh Dầu Quế Trà My Nguyên Chất", image: unsplash.oilBottle2, province: "Quảng Nam", price: 145000, rating: 4.9, reviews: 72, isNew: true },
+  { id: "15", name: "Mắm Tôm Chua Huế Cổ Truyền", image: unsplash.sauceJar, province: "Huế", price: 110000, originalPrice: 135000, rating: 4.7, reviews: 89, isBestSeller: true },
+  { id: "16", name: "Khay Đặc Sản Miền Trung Tổng Hợp", image: unsplash.tray, province: "Đà Nẵng", price: 450000, rating: 4.9, reviews: 92, isNew: true },
+  { id: "17", name: "Vòng Charm Đá Ngọc Tự Nhiên", image: unsplash.beads, province: "Huế", price: 220000, rating: 4.7, reviews: 63, isNew: true },
+];

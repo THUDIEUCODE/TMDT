@@ -1,0 +1,280 @@
+@media (max-width: 1040px) {
+  .header-inner {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 16px 0;
+  }
+
+  .main-nav {
+    justify-content: flex-start;
+  }
+
+  .home-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .category-grid,
+  .product-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .product-list-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .category-overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .category-product-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .product-detail-main,
+  .product-detail-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .cart-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .checkout-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .combo-type-grid,
+  .combo-product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .combo-review {
+    grid-template-columns: 1fr;
+  }
+
+  .blog-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .cart-summary-panel,
+  .checkout-summary {
+    position: static;
+  }
+
+  .cart-item {
+    grid-template-columns: 86px minmax(0, 1fr) 120px;
+  }
+
+  .product-filter,
+  .category-product-filter {
+    position: static;
+  }
+
+  .footer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .container {
+    width: min(100% - 24px, var(--container));
+  }
+
+  .header-top-inner {
+    justify-content: center;
+    text-align: center;
+  }
+
+  .header-top-inner span:nth-child(n + 2) {
+    display: none;
+  }
+
+  .brand strong {
+    font-size: 19px;
+  }
+
+  .main-nav {
+    width: 100%;
+  }
+
+  .main-nav a {
+    flex: 1 1 calc(50% - 8px);
+    text-align: center;
+  }
+
+  .main-content {
+    padding-top: 18px;
+  }
+
+  .home-page {
+    gap: 44px;
+  }
+
+  .home-hero {
+    min-height: auto;
+    padding: 32px 22px;
+    border-radius: 20px;
+  }
+
+  .home-hero h1 {
+    font-size: 42px;
+  }
+
+  .home-hero p {
+    font-size: 16px;
+  }
+
+  .hero-visual {
+    display: none;
+  }
+
+  .category-grid,
+  .product-grid,
+  .blog-grid,
+  .combo-grid,
+  .grid-3,
+  .grid-4 {
+    grid-template-columns: 1fr;
+  }
+
+  .product-list-hero {
+    min-height: 190px;
+    padding: 32px 18px;
+  }
+
+  .product-list-hero h1 {
+    font-size: 34px;
+  }
+
+  .product-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .category-hero,
+  .category-title-panel {
+    padding: 32px 18px;
+  }
+
+  .category-hero h1,
+  .category-title-panel h1 {
+    font-size: 34px;
+  }
+
+  .category-overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .product-detail-image {
+    min-height: 280px;
+  }
+
+  .product-detail-info {
+    padding: 20px;
+  }
+
+  .product-detail-info h1 {
+    font-size: 32px;
+  }
+
+  .variant-list,
+  .product-detail-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .cart-hero {
+    padding: 32px 18px;
+  }
+
+  .cart-hero h1 {
+    font-size: 34px;
+  }
+
+  .cart-item {
+    grid-template-columns: 1fr;
+  }
+
+  .cart-item-image {
+    min-height: 140px;
+  }
+
+  .cart-quantity {
+    width: 144px;
+  }
+
+  .voucher-box > div {
+    grid-template-columns: 1fr;
+  }
+
+  .checkout-hero {
+    padding: 32px 18px;
+  }
+
+  .checkout-hero h1,
+  .order-success-card h1 {
+    font-size: 34px;
+  }
+
+  .checkout-form-panel,
+  .order-success-card {
+    padding: 20px;
+  }
+
+  .checkout-form-grid,
+  .success-info-grid,
+  .payment-actions,
+  .success-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .shipping-methods label {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .shipping-methods b {
+    grid-column: 2;
+  }
+
+  .combo-hero,
+  .blog-hero {
+    padding: 32px 18px;
+  }
+
+  .combo-hero h1,
+  .blog-hero h1,
+  .blog-detail-content h1 {
+    font-size: 34px;
+  }
+
+  .combo-steps,
+  .combo-form-grid,
+  .combo-product-toolbar,
+  .combo-type-grid,
+  .combo-product-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .combo-panel,
+  .blog-detail-content {
+    padding: 20px;
+  }
+
+  .combo-next {
+    width: 100%;
+  }
+
+  .blog-detail-image {
+    min-height: 240px;
+  }
+
+  .section-heading h2 {
+    font-size: 29px;
+  }
+
+  .footer-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .table-row {
+    grid-template-columns: 1fr;
+  }
+}
