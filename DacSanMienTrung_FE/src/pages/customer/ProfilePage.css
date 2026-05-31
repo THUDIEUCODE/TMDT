@@ -1,0 +1,445 @@
+.profile-page {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.profile-sidebar,
+.profile-panel,
+.profile-modal,
+.profile-order-card,
+.profile-combo-card,
+.address-card,
+.review-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.profile-sidebar {
+  position: sticky;
+  top: 128px;
+  display: grid;
+  gap: 18px;
+  padding: 18px;
+}
+
+.profile-user {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.profile-user > span {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: linear-gradient(135deg, var(--color-red), var(--color-orange));
+  border-radius: 50%;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.profile-user strong {
+  display: block;
+  color: var(--color-purple);
+}
+
+.profile-user small {
+  color: var(--color-muted);
+  word-break: break-word;
+}
+
+.profile-nav {
+  display: grid;
+  gap: 8px;
+}
+
+.profile-nav button,
+.profile-order-actions button,
+.profile-combo-footer button,
+.modal-actions button {
+  min-height: 40px;
+  padding: 0 14px;
+  color: var(--color-purple);
+  background: #fffaf0;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.profile-nav button {
+  justify-content: flex-start;
+  text-align: left;
+  border-radius: 12px;
+}
+
+.profile-nav button.active,
+.profile-nav button:hover {
+  color: #fff;
+  background: var(--color-red);
+  border-color: var(--color-red);
+}
+
+.profile-content {
+  min-width: 0;
+}
+
+.profile-panel {
+  display: grid;
+  gap: 20px;
+  padding: 24px;
+}
+
+.profile-panel-heading {
+  display: grid;
+  gap: 7px;
+}
+
+.profile-panel-heading.with-action {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.profile-panel-heading span {
+  color: var(--color-red);
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.profile-panel-heading h2 {
+  margin: 0;
+  color: var(--color-purple);
+  font-family: var(--font-display);
+  font-size: 32px;
+}
+
+.profile-text-link {
+  color: var(--color-red);
+  font-weight: 800;
+}
+
+.profile-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.profile-info-grid div,
+.address-card,
+.review-card {
+  display: grid;
+  gap: 7px;
+  padding: 16px;
+  background: #fffaf0;
+}
+
+.profile-info-grid span,
+.profile-order-title span:first-child,
+.profile-combo-head span,
+.address-card p,
+.review-card p {
+  color: var(--color-muted);
+}
+
+.profile-info-grid strong,
+.address-card strong,
+.review-card strong {
+  color: var(--color-purple);
+}
+
+.order-filter-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.order-filter-tabs button {
+  min-height: 38px;
+  padding: 0 14px;
+  color: var(--color-purple);
+  background: #fffaf0;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.order-filter-tabs button.active,
+.order-filter-tabs button:hover {
+  color: #fff;
+  background: var(--color-red);
+  border-color: var(--color-red);
+}
+
+.profile-order-list {
+  display: grid;
+  gap: 14px;
+}
+
+.profile-order-card {
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 16px;
+}
+
+.order-product-symbol {
+  width: 68px;
+  height: 68px;
+  display: grid;
+  place-items: center;
+  color: var(--color-cream);
+  background: linear-gradient(135deg, var(--color-purple), var(--color-red));
+  border-radius: 14px;
+  font-weight: 900;
+}
+
+.profile-order-main {
+  display: grid;
+  gap: 8px;
+}
+
+.profile-order-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.profile-order-title strong {
+  display: block;
+  color: var(--color-purple);
+}
+
+.profile-order-main p {
+  margin: 0;
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.profile-order-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: var(--color-muted);
+  font-size: 14px;
+}
+
+.status-badge {
+  width: fit-content;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.status-pending {
+  color: #8a4d00;
+  background: #fff2c6;
+}
+
+.status-shipping {
+  color: #075985;
+  background: #dff3ff;
+}
+
+.status-completed {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.status-cancelled {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.status-returning {
+  color: #6c3483;
+  background: #f2e4f8;
+}
+
+.profile-order-actions {
+  display: grid;
+  gap: 8px;
+  justify-items: stretch;
+}
+
+.profile-order-actions .button {
+  min-width: 126px;
+}
+
+.profile-combo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.profile-combo-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.profile-combo-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.profile-combo-head h3 {
+  margin: 4px 0 0;
+  color: var(--color-purple);
+  font-size: 18px;
+}
+
+.profile-combo-head b,
+.address-card span,
+.review-card span {
+  width: fit-content;
+  padding: 6px 9px;
+  color: var(--color-red);
+  background: var(--color-cream);
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.profile-combo-card p {
+  margin: 0;
+  color: var(--color-muted);
+  line-height: 1.55;
+}
+
+.profile-combo-card ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--color-text);
+}
+
+.profile-combo-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.profile-combo-footer strong,
+.points-panel > strong {
+  color: var(--color-red);
+  font-size: 24px;
+}
+
+.points-panel p {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.profile-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(47, 36, 28, 0.42);
+}
+
+.profile-modal {
+  width: min(100%, 560px);
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+}
+
+.profile-modal label {
+  display: grid;
+  gap: 8px;
+  color: var(--color-purple);
+  font-weight: 800;
+}
+
+.profile-modal input,
+.profile-modal textarea {
+  width: 100%;
+  padding: 12px 14px;
+  color: var(--color-text);
+  background: #fffaf0;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  outline: none;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.combo-detail-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.combo-detail-list span {
+  padding: 8px 10px;
+  color: var(--color-purple);
+  background: var(--color-cream);
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+@media (max-width: 1040px) {
+  .profile-page {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-sidebar {
+    position: static;
+  }
+
+  .profile-nav {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .profile-nav button {
+    white-space: nowrap;
+  }
+
+  .profile-combo-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .profile-panel-heading.with-action,
+  .profile-info-grid,
+  .profile-order-card,
+  .profile-combo-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-panel {
+    padding: 18px;
+  }
+
+  .profile-order-actions {
+    justify-items: stretch;
+  }
+}

@@ -1,0 +1,463 @@
+.order-management-page {
+  display: grid;
+  gap: 22px;
+}
+
+.order-management-header,
+.staff-order-stat-grid article,
+.staff-order-filter-panel,
+.staff-order-table-card,
+.staff-order-modal {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.order-management-header {
+  padding: 26px;
+  color: var(--color-cream);
+  background:
+    radial-gradient(circle at 82% 18%, rgba(243, 156, 18, 0.28), transparent 12rem),
+    linear-gradient(135deg, var(--color-red), #a93226 52%, var(--color-purple));
+}
+
+.order-management-header span {
+  width: fit-content;
+  display: inline-flex;
+  margin-bottom: 10px;
+  padding: 7px 12px;
+  color: var(--color-purple-dark);
+  background: var(--color-orange);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.order-management-header h1 {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-size: 42px;
+}
+
+.order-management-header p {
+  max-width: 620px;
+  margin: 0;
+  color: rgba(253, 246, 227, 0.9);
+  line-height: 1.65;
+}
+
+.staff-order-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.staff-order-stat-grid article {
+  display: grid;
+  gap: 8px;
+  min-height: 108px;
+  padding: 16px;
+}
+
+.staff-order-stat-grid span {
+  color: var(--color-muted);
+  font-weight: 800;
+}
+
+.staff-order-stat-grid strong {
+  color: var(--color-red);
+  font-size: 28px;
+}
+
+.staff-order-filter-panel {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) 220px 220px;
+  gap: 14px;
+  padding: 18px;
+}
+
+.staff-order-filter-panel label,
+.staff-order-modal label {
+  display: grid;
+  gap: 7px;
+  color: var(--color-purple);
+  font-weight: 900;
+}
+
+.staff-order-filter-panel input,
+.staff-order-filter-panel select,
+.staff-order-modal textarea {
+  width: 100%;
+  color: var(--color-text);
+  background: #fffaf0;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  outline: none;
+}
+
+.staff-order-filter-panel input,
+.staff-order-filter-panel select {
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 999px;
+}
+
+.staff-order-modal textarea {
+  padding: 12px 14px;
+  resize: vertical;
+}
+
+.staff-order-filter-panel input:focus,
+.staff-order-filter-panel select:focus,
+.staff-order-modal textarea:focus {
+  border-color: var(--color-orange);
+  box-shadow: 0 0 0 3px rgba(243, 156, 18, 0.16);
+}
+
+.staff-order-table-card {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.staff-order-table-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.staff-order-table-summary strong {
+  color: var(--color-purple);
+  font-size: 20px;
+}
+
+.staff-order-table-summary span {
+  color: var(--color-muted);
+}
+
+.staff-order-management-table {
+  display: grid;
+  gap: 10px;
+  overflow-x: auto;
+}
+
+.staff-order-table-head,
+.staff-order-table-row {
+  display: grid;
+  grid-template-columns: 140px 150px 120px 105px 120px 120px 130px minmax(230px, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-width: 1220px;
+}
+
+.staff-order-table-head {
+  padding: 0 12px;
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.staff-order-table-row {
+  padding: 12px;
+  background: #fffaf0;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+}
+
+.staff-order-table-row strong {
+  color: var(--color-purple);
+}
+
+.staff-order-table-row b {
+  color: var(--color-red);
+}
+
+.staff-order-status {
+  width: fit-content;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.staff-order-status-pending {
+  color: #8a4d00;
+  background: #fff2c6;
+}
+
+.staff-order-status-confirmed {
+  color: #4b235d;
+  background: #f2e4f8;
+}
+
+.staff-order-status-shipping {
+  color: #075985;
+  background: #dff3ff;
+}
+
+.staff-order-status-completed {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.staff-order-status-cancelled {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.staff-order-status-returning {
+  color: #9a3412;
+  background: #ffedd5;
+}
+
+.staff-order-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.staff-order-actions button,
+.staff-order-actions a,
+.staff-order-modal-actions > button:not(.button) {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  color: var(--color-red);
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.staff-order-actions button:hover,
+.staff-order-actions a:hover {
+  color: #fff;
+  background: var(--color-red);
+  border-color: var(--color-red);
+}
+
+.staff-order-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(47, 36, 28, 0.42);
+}
+
+.staff-order-modal {
+  width: min(100%, 620px);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+}
+
+.staff-order-detail-modal {
+  width: min(100%, 980px);
+}
+
+.staff-order-modal-heading {
+  display: grid;
+  gap: 6px;
+}
+
+.staff-order-modal-heading span {
+  color: var(--color-red);
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.staff-order-modal-heading h2 {
+  margin: 0;
+  color: var(--color-purple);
+  font-size: 28px;
+}
+
+.staff-order-form-error {
+  margin: 0;
+  color: var(--color-red);
+  font-weight: 800;
+}
+
+.staff-order-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.staff-order-modal-actions > button:not(.button) {
+  min-height: 42px;
+  color: var(--color-purple);
+  background: #fffaf0;
+}
+
+.staff-order-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.staff-order-detail-grid div,
+.staff-order-total-box,
+.staff-order-cancel-reason,
+.staff-order-history,
+.staff-order-detail-items {
+  background: #fffaf0;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+}
+
+.staff-order-detail-grid div {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+}
+
+.staff-order-detail-full {
+  grid-column: 1 / -1;
+}
+
+.staff-order-detail-grid span,
+.staff-order-detail-item small,
+.staff-order-total-box span,
+.staff-order-history span {
+  color: var(--color-muted);
+}
+
+.staff-order-detail-grid strong,
+.staff-order-history strong {
+  color: var(--color-purple);
+}
+
+.staff-order-detail-items,
+.staff-order-history {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.staff-order-detail-items h3,
+.staff-order-history h3 {
+  margin: 0;
+  color: var(--color-purple);
+}
+
+.staff-order-detail-item {
+  display: grid;
+  grid-template-columns: 48px minmax(170px, 1fr) 120px 60px 110px 120px;
+  gap: 10px;
+  align-items: center;
+}
+
+.staff-order-detail-item > span {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  color: var(--color-cream);
+  background: linear-gradient(135deg, var(--color-purple), var(--color-red));
+  border-radius: 12px;
+  font-weight: 900;
+}
+
+.staff-order-detail-item b {
+  color: var(--color-red);
+}
+
+.staff-order-total-box {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.staff-order-total-box div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.staff-order-total-box div:last-child {
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+  font-size: 18px;
+}
+
+.staff-order-total-box strong {
+  color: var(--color-red);
+}
+
+.staff-order-cancel-reason {
+  padding: 14px;
+}
+
+.staff-order-cancel-reason strong {
+  color: var(--color-red);
+}
+
+.staff-order-cancel-reason p {
+  margin: 8px 0 0;
+  color: var(--color-muted);
+}
+
+.staff-order-history div {
+  display: grid;
+  gap: 4px;
+}
+
+@media (max-width: 1180px) {
+  .staff-order-stat-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .staff-order-filter-panel {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .order-management-header {
+    padding: 22px;
+  }
+
+  .order-management-header h1 {
+    font-size: 34px;
+  }
+
+  .staff-order-stat-grid,
+  .staff-order-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .staff-order-table-summary,
+  .staff-order-modal-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .staff-order-table-head {
+    display: none;
+  }
+
+  .staff-order-table-row,
+  .staff-order-detail-item {
+    grid-template-columns: 1fr;
+    min-width: 0;
+  }
+
+  .staff-order-actions,
+  .staff-order-modal-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}

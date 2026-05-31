@@ -1,0 +1,20 @@
+.cart-remove {
+  min-height: 38px;
+  padding: 0 14px;
+  color: var(--color-red);
+  background: #fffaf0;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.cart-remove:hover {
+  color: #fff;
+  background: var(--color-red);
+  border-color: var(--color-red);
+}
+
+.cart-checkout-button {
+  width: 100%;
+}

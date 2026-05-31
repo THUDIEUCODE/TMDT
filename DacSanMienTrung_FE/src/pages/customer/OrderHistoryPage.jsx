@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import OrderStatusBadge from '../../components/order/OrderStatusBadge'
-import { mockOrders } from '../../data/mockOrders'
+import { getOrderTotal, mockOrders } from '../../data/mockOrders'
 
 function OrderHistoryPage() {
   return (
@@ -11,7 +11,7 @@ function OrderHistoryPage() {
           <div className="table-row" key={order.id}>
             <Link to={`/orders/${order.id}`}>{order.id}</Link>
             <OrderStatusBadge status={order.status} />
-            <strong>{order.total.toLocaleString('vi-VN')}đ</strong>
+            <strong>{getOrderTotal(order).toLocaleString('vi-VN')}đ</strong>
           </div>
         ))}
       </div>

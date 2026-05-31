@@ -29,3 +29,33 @@ export const mockCombos = [
     type: 'trungThu',
   },
 ]
+
+export const mockPurchasedCombos = [
+  {
+    id: 'gift-001',
+    name: 'Hộp quà Tết miền Trung',
+    occasion: 'Tết Nguyên Đán',
+    message: 'Chúc gia đình một năm mới an khang, đậm đà hương vị quê nhà.',
+    status: 'Đã mua',
+    total: 685000,
+    products: ['Chả bò Đà Nẵng', 'Mè xửng Huế', 'Trà cung đình Huế', 'Bánh khô mè Quảng Nam'],
+  },
+  {
+    id: 'gift-002',
+    name: 'Combo gửi thương về Huế',
+    occasion: 'Quà biếu ba mẹ',
+    message: 'Con gửi chút vị miền Trung, mong ba mẹ luôn mạnh khỏe.',
+    status: 'Đang chuẩn bị',
+    total: 438000,
+    products: ['Mắm ruốc Huế', 'Mè xửng Huế', 'Trà cung đình Huế'],
+  },
+  {
+    id: 'gift-003',
+    name: 'Giỏ quà Hội An',
+    occasion: 'Sinh nhật bạn thân',
+    message: 'Một món quà nhỏ cho người mê đồ ăn xứ Quảng.',
+    status: 'Đã lưu',
+    total: 312000,
+    products: ['Bánh tráng Đại Lộc', 'Mì Quảng khô', 'Bánh khô mè'],
+  },
+]

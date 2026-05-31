@@ -38,3 +38,8 @@ Thumbs.db
 # Java backend later
 target/
 *.class
+
+# Node/Vite
+node_modules/
+dist/
+.vite/

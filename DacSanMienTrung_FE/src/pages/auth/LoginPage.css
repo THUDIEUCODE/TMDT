@@ -1,0 +1,235 @@
+.login-page {
+  min-height: calc(100vh - 190px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 440px;
+  gap: 28px;
+  align-items: stretch;
+}
+
+.login-visual,
+.login-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.login-visual {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  align-content: end;
+  gap: 18px;
+  min-height: 560px;
+  padding: 44px;
+  color: var(--color-cream);
+  background:
+    radial-gradient(circle at 80% 18%, rgba(243, 156, 18, 0.36), transparent 12rem),
+    linear-gradient(135deg, var(--color-red), #9f3126 48%, var(--color-purple));
+}
+
+.login-visual::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.12;
+  background-image: repeating-linear-gradient(135deg, #fff 0, #fff 1px, transparent 1px, transparent 18px);
+}
+
+.login-visual > * {
+  position: relative;
+  z-index: 1;
+}
+
+.login-badge {
+  width: fit-content;
+  padding: 8px 14px;
+  color: var(--color-purple-dark);
+  background: var(--color-orange);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.login-visual h1 {
+  max-width: 560px;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 56px;
+  line-height: 1.05;
+}
+
+.login-visual p {
+  max-width: 560px;
+  margin: 0;
+  color: rgba(253, 246, 227, 0.9);
+  line-height: 1.7;
+}
+
+.login-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 180px));
+  gap: 10px;
+}
+
+.login-feature-grid span {
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 12px;
+  font-weight: 800;
+}
+
+.login-card {
+  display: grid;
+  align-content: center;
+  gap: 24px;
+  padding: 34px;
+  background: var(--color-surface);
+}
+
+.login-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--color-red);
+}
+
+.login-brand span {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  color: var(--color-orange);
+  background: var(--color-red);
+  border: 3px solid var(--color-orange);
+  border-radius: 50%;
+  font-weight: 900;
+}
+
+.login-heading {
+  display: grid;
+  gap: 8px;
+}
+
+.login-heading span {
+  color: var(--color-red);
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.login-heading h2 {
+  margin: 0;
+  color: var(--color-purple);
+  font-family: var(--font-display);
+  font-size: 36px;
+}
+
+.login-heading p,
+.login-register {
+  margin: 0;
+  color: var(--color-muted);
+  line-height: 1.6;
+}
+
+.login-form {
+  display: grid;
+  gap: 16px;
+}
+
+.login-form label {
+  display: grid;
+  gap: 8px;
+  color: var(--color-purple);
+  font-weight: 800;
+}
+
+.login-form input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 14px;
+  color: var(--color-text);
+  background: #fffaf0;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  outline: none;
+}
+
+.login-form input:focus {
+  border-color: var(--color-orange);
+  box-shadow: 0 0 0 3px rgba(243, 156, 18, 0.16);
+}
+
+.login-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  color: var(--color-muted);
+  font-size: 14px;
+}
+
+.remember-row {
+  display: inline-flex !important;
+  grid-template-columns: none !important;
+  align-items: center;
+  gap: 8px !important;
+  font-weight: 600 !important;
+}
+
+.remember-row input {
+  width: 16px;
+  min-height: 16px;
+  accent-color: var(--color-red);
+}
+
+.login-options a,
+.login-register a {
+  color: var(--color-red);
+  font-weight: 800;
+}
+
+.login-message {
+  margin: 0;
+  padding: 10px 12px;
+  color: var(--color-red);
+  background: var(--color-cream);
+  border-radius: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.login-submit {
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .login-page {
+    grid-template-columns: 1fr;
+  }
+
+  .login-visual {
+    min-height: 360px;
+    padding: 30px;
+  }
+}
+
+@media (max-width: 600px) {
+  .login-visual h1 {
+    font-size: 40px;
+  }
+
+  .login-feature-grid,
+  .login-options {
+    grid-template-columns: 1fr;
+  }
+
+  .login-options {
+    display: grid;
+    justify-items: start;
+  }
+
+  .login-card {
+    padding: 22px;
+  }
+}

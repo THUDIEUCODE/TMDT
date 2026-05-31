@@ -1,5 +1,7 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import MainLayout from '../components/layout/MainLayout'
+import AdminLayout from '../components/admin/AdminLayout'
+import StaffLayout from '../components/staff/StaffLayout'
 import LoginPage from '../pages/auth/LoginPage'
 import RegisterPage from '../pages/auth/RegisterPage'
 import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage'
@@ -12,7 +14,6 @@ import CartPage from '../pages/customer/CartPage'
 import CheckoutInfoPage from '../pages/customer/CheckoutInfoPage'
 import PaymentPage from '../pages/customer/PaymentPage'
 import OrderSuccessPage from '../pages/customer/OrderSuccessPage'
-import OrderHistoryPage from '../pages/customer/OrderHistoryPage'
 import OrderDetailPage from '../pages/customer/OrderDetailPage'
 import ComboGiftPage from '../pages/customer/ComboGiftPage'
 import BlogListPage from '../pages/customer/BlogListPage'
@@ -45,7 +46,7 @@ function AppRoutes() {
           <Route path="/checkout" element={<CheckoutInfoPage />} />
           <Route path="/payment" element={<PaymentPage />} />
           <Route path="/order-success" element={<OrderSuccessPage />} />
-          <Route path="/orders" element={<OrderHistoryPage />} />
+          <Route path="/orders" element={<Navigate to="/profile" replace />} />
           <Route path="/orders/:id" element={<OrderDetailPage />} />
           <Route path="/combo-gift" element={<ComboGiftPage />} />
           <Route path="/blogs" element={<BlogListPage />} />
@@ -54,18 +55,24 @@ function AppRoutes() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/staff/dashboard" element={<StaffDashboardPage />} />
-          <Route path="/staff/products" element={<ProductManagementPage />} />
-          <Route path="/staff/categories" element={<CategoryManagementPage />} />
-          <Route path="/staff/orders" element={<OrderManagementPage />} />
-          <Route path="/staff/inventory" element={<InventoryPage />} />
-          <Route path="/staff/returns" element={<ReturnManagementPage />} />
-          <Route path="/staff/reviews" element={<ReviewManagementPage />} />
-          <Route path="/staff/blogs" element={<BlogManagementPage />} />
-          <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
-          <Route path="/admin/accounts" element={<AccountManagementPage />} />
-          <Route path="/admin/vouchers" element={<VoucherManagementPage />} />
-          <Route path="/admin/reports" element={<ReportPage />} />
+          <Route path="/staff" element={<StaffLayout />}>
+            <Route index element={<Navigate to="/staff/dashboard" replace />} />
+            <Route path="dashboard" element={<StaffDashboardPage />} />
+            <Route path="products" element={<ProductManagementPage />} />
+            <Route path="categories" element={<CategoryManagementPage />} />
+            <Route path="orders" element={<OrderManagementPage />} />
+            <Route path="inventory" element={<InventoryPage />} />
+            <Route path="returns" element={<ReturnManagementPage />} />
+            <Route path="reviews" element={<ReviewManagementPage />} />
+            <Route path="blogs" element={<BlogManagementPage />} />
+          </Route>
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="dashboard" element={<AdminDashboardPage />} />
+            <Route path="accounts" element={<AccountManagementPage />} />
+            <Route path="vouchers" element={<VoucherManagementPage />} />
+            <Route path="reports" element={<ReportPage />} />
+          </Route>
         </Route>
       </Routes>
     </BrowserRouter>
