@@ -1,24 +1,41 @@
-import { mockProducts } from './mockProducts'
-
-const cartProductIds = ['me-xung-hue', 'muc-rim-me-da-nang', 'tra-cung-dinh-hue']
-
-export const mockCartItems = cartProductIds.map((productId, index) => {
-  const product = mockProducts.find((item) => item.id === productId)
-  const variant = product.variants[index % product.variants.length]
-
-  return {
-    id: `cart-${product.id}`,
-    productId: product.id,
-    name: product.name,
-    image: product.image,
-    variantId: variant.id,
-    variantLabel: variant.label,
-    province: product.province,
-    price: variant.price,
-    quantity: index + 1,
-    stock: variant.stock,
-  }
-})
+export const mockCartItems = [
+  {
+    id: 'cart-me-xung-hue',
+    productId: 'me-xung-hue',
+    name: 'Mè xửng Huế',
+    image: 'MX',
+    variantId: 'hop-500g',
+    variantLabel: 'Hộp 500g',
+    province: 'Thừa Thiên Huế',
+    price: 89000,
+    quantity: 2,
+    stock: 24,
+  },
+  {
+    id: 'cart-muc-rim-me',
+    productId: 'muc-rim-me-da-nang',
+    name: 'Mực rim me Đà Nẵng',
+    image: 'MR',
+    variantId: 'hu-500g',
+    variantLabel: 'Hũ 500g',
+    province: 'Đà Nẵng',
+    price: 215000,
+    quantity: 1,
+    stock: 16,
+  },
+  {
+    id: 'cart-tra-cung-dinh',
+    productId: 'tra-cung-dinh-hue',
+    name: 'Trà cung đình Huế',
+    image: 'TR',
+    variantId: 'goi-250g',
+    variantLabel: 'Gói 250g',
+    province: 'Thừa Thiên Huế',
+    price: 125000,
+    quantity: 1,
+    stock: 30,
+  },
+]
 
 export const mockCartVoucher = {
   code: 'MT10',

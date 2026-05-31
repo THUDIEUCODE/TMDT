@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { mockCartItems, mockCartVoucher } from '../../data/mockCart'
+import './CartPage.css'
 
 const shippingFee = 25000
+const formatCurrency = (value) => `${value.toLocaleString('vi-VN')}đ`
 
 function CartPage() {
   const [items, setItems] = useState(mockCartItems)
@@ -60,7 +62,7 @@ function CartPage() {
 
                 <div className="cart-item-price">
                   <small>Đơn giá</small>
-                  <strong>{item.price.toLocaleString('vi-VN')}đ</strong>
+                  <strong>{formatCurrency(item.price)}</strong>
                 </div>
 
                 <div className="quantity-control cart-quantity">
@@ -75,7 +77,7 @@ function CartPage() {
 
                 <div className="cart-item-total">
                   <small>Thành tiền</small>
-                  <strong>{(item.price * item.quantity).toLocaleString('vi-VN')}đ</strong>
+                  <strong>{formatCurrency(item.price * item.quantity)}</strong>
                 </div>
 
                 <button className="cart-remove" type="button" onClick={() => removeItem(item.id)}>
@@ -111,19 +113,19 @@ function CartPage() {
             <div className="summary-lines">
               <div>
                 <span>Tổng tiền hàng</span>
-                <strong>{subtotal.toLocaleString('vi-VN')}đ</strong>
+                <strong>{formatCurrency(subtotal)}</strong>
               </div>
               <div>
                 <span>Giảm giá</span>
-                <strong>-{discount.toLocaleString('vi-VN')}đ</strong>
+                <strong>-{formatCurrency(discount)}</strong>
               </div>
               <div>
                 <span>Phí vận chuyển tạm tính</span>
-                <strong>{shippingFee.toLocaleString('vi-VN')}đ</strong>
+                <strong>{formatCurrency(shippingFee)}</strong>
               </div>
               <div className="summary-total">
                 <span>Tổng thanh toán</span>
-                <strong>{total.toLocaleString('vi-VN')}đ</strong>
+                <strong>{formatCurrency(total)}</strong>
               </div>
             </div>
 

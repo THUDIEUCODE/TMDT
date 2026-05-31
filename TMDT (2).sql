@@ -8,18 +8,18 @@
 USE master;
 GO
 
-IF EXISTS (SELECT name FROM sys.databases WHERE name = N'DacSanMienTrung01')
+IF EXISTS (SELECT name FROM sys.databases WHERE name = N'DacSanMienTrung02')
 BEGIN
-    ALTER DATABASE DacSanMienTrung01 SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-    DROP DATABASE DacSanMienTrung01;
+    ALTER DATABASE DacSanMienTrung02 SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE DacSanMienTrung02;
 END
 GO
 
-CREATE DATABASE DacSanMienTrung01
+CREATE DATABASE DacSanMienTrung02
     COLLATE Vietnamese_CI_AS;
 GO
 
-USE DacSanMienTrung01;
+USE DacSanMienTrung02;
 GO
 
 -- ============================================================

@@ -1,0 +1,249 @@
+.order-detail-page {
+  display: grid;
+  gap: 24px;
+}
+
+.order-detail-hero,
+.order-detail-card,
+.order-total-card,
+.order-detail-empty {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.order-detail-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 26px;
+  background:
+    radial-gradient(circle at 78% 20%, rgba(243, 156, 18, 0.28), transparent 12rem),
+    linear-gradient(135deg, var(--color-red), var(--color-purple));
+  color: var(--color-cream);
+}
+
+.order-detail-hero span:first-child {
+  display: inline-flex;
+  margin-bottom: 8px;
+  padding: 7px 12px;
+  color: var(--color-purple-dark);
+  background: var(--color-orange);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.order-detail-hero h1 {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-size: 38px;
+}
+
+.order-detail-hero p {
+  margin: 0;
+  color: rgba(253, 246, 227, 0.88);
+}
+
+.order-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 18px;
+  align-items: start;
+}
+
+.order-detail-card {
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+}
+
+.order-detail-card h2 {
+  margin: 0;
+  color: var(--color-purple);
+  font-size: 24px;
+}
+
+.detail-lines {
+  display: grid;
+  gap: 12px;
+}
+
+.detail-lines p {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 14px;
+  background: #fffaf0;
+  border-radius: 12px;
+}
+
+.detail-lines span,
+.timeline-list small {
+  color: var(--color-muted);
+}
+
+.detail-lines strong,
+.timeline-list strong {
+  color: var(--color-purple);
+}
+
+.timeline-list {
+  display: grid;
+  gap: 14px;
+}
+
+.timeline-list div {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.timeline-list div > span {
+  width: 12px;
+  height: 12px;
+  margin-top: 4px;
+  background: var(--color-red);
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px var(--color-cream);
+}
+
+.timeline-list p {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
+.order-items-table {
+  display: grid;
+  gap: 10px;
+}
+
+.order-items-head,
+.order-item-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.5fr) 1fr 90px 120px 130px;
+  gap: 12px;
+  align-items: center;
+}
+
+.order-items-head {
+  padding: 0 12px;
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.order-item-row {
+  padding: 12px;
+  background: #fffaf0;
+  border-radius: 14px;
+}
+
+.order-item-product {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.order-item-product span {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  color: var(--color-cream);
+  background: linear-gradient(135deg, var(--color-purple), var(--color-red));
+  border-radius: 12px;
+  font-weight: 900;
+}
+
+.order-item-row strong {
+  color: var(--color-red);
+}
+
+.order-detail-bottom {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 18px;
+  align-items: start;
+}
+
+.order-detail-bottom > .button {
+  width: fit-content;
+}
+
+.order-total-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+
+.order-total-card div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--color-muted);
+}
+
+.order-total-card strong {
+  color: var(--color-purple);
+}
+
+.order-total-line {
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.order-total-line strong {
+  color: var(--color-red);
+}
+
+.order-detail-empty {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 42px 24px;
+  text-align: center;
+}
+
+.order-detail-empty h1 {
+  margin: 0;
+  color: var(--color-purple);
+}
+
+.order-detail-empty p {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+@media (max-width: 900px) {
+  .order-detail-grid,
+  .order-detail-bottom {
+    grid-template-columns: 1fr;
+  }
+
+  .order-items-head {
+    display: none;
+  }
+
+  .order-item-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .order-detail-hero {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .order-detail-hero h1 {
+    font-size: 30px;
+  }
+}
