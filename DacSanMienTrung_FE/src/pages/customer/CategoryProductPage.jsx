@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import ProductCard from '../../components/product/ProductCard'
 import { mockCategories } from '../../data/mockCategories'
 import { mockProducts } from '../../data/mockProducts'
+import { getCategoryById } from '../../services/categoryService'
+import { getProductsByCategory } from '../../services/productService'
 
 function isInPriceRange(product, range) {
   if (range === 'under-100') {
@@ -40,7 +42,17 @@ function sortProducts(products, sortBy) {
 
 function CategoryProductPage() {
   const { categorySlug } = useParams()
-  const category = mockCategories.find((item) => item.slug === categorySlug)
+  const isCategoryId = /^\d+$/.test(categorySlug)
+  const fallbackCategory = useMemo(
+    () => mockCategories.find((item) => item.slug === categorySlug || item.id === categorySlug),
+    [categorySlug],
+  )
+  const [category, setCategory] = useState(fallbackCategory)
+  const [categoryProducts, setCategoryProducts] = useState(() =>
+    mockProducts.filter((product) => product.categorySlug === categorySlug),
+  )
+  const [isLoading, setIsLoading] = useState(isCategoryId)
+  const [hasApiError, setHasApiError] = useState(false)
   const [searchText, setSearchText] = useState('')
   const [selectedSubCategory, setSelectedSubCategory] = useState('all')
   const [selectedProvince, setSelectedProvince] = useState('all')
@@ -48,16 +60,62 @@ function CategoryProductPage() {
   const [selectedType, setSelectedType] = useState('all')
   const [sortBy, setSortBy] = useState('newest')
 
-  const categoryProducts = useMemo(() => {
-    return mockProducts.filter((product) => product.categorySlug === categorySlug)
-  }, [categorySlug])
+  useEffect(() => {
+    let isMounted = true
+
+    const fallbackProducts = mockProducts.filter((product) => product.categorySlug === categorySlug)
+
+    const loadCategoryProducts = async () => {
+      setIsLoading(true)
+      setHasApiError(false)
+
+      if (!isCategoryId) {
+        setCategory(fallbackCategory)
+        setCategoryProducts(fallbackProducts)
+        setIsLoading(false)
+        return
+      }
+
+      try {
+        const [apiCategory, apiProducts] = await Promise.all([
+          getCategoryById(categorySlug),
+          getProductsByCategory(categorySlug),
+        ])
+
+        if (!isMounted) {
+          return
+        }
+
+        setCategory(apiCategory || fallbackCategory)
+        setCategoryProducts(apiProducts.length > 0 ? apiProducts : fallbackProducts)
+      } catch {
+        if (!isMounted) {
+          return
+        }
+
+        setCategory(fallbackCategory)
+        setCategoryProducts(fallbackProducts)
+        setHasApiError(true)
+      } finally {
+        if (isMounted) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    loadCategoryProducts()
+
+    return () => {
+      isMounted = false
+    }
+  }, [categorySlug, fallbackCategory, isCategoryId])
 
   const provinces = useMemo(() => {
-    return [...new Set(categoryProducts.map((product) => product.province))].sort()
+    return [...new Set(categoryProducts.map((product) => product.province).filter(Boolean))].sort()
   }, [categoryProducts])
 
   const productTypes = useMemo(() => {
-    return [...new Set(categoryProducts.map((product) => product.subCategory))].sort()
+    return [...new Set(categoryProducts.map((product) => product.subCategory).filter(Boolean))].sort()
   }, [categoryProducts])
 
   const filteredProducts = useMemo(() => {
@@ -65,7 +123,7 @@ function CategoryProductPage() {
     const products = categoryProducts.filter((product) => {
       const matchesSearch =
         product.name.toLowerCase().includes(keyword) ||
-        product.province.toLowerCase().includes(keyword)
+        (product.province || '').toLowerCase().includes(keyword)
       const matchesSubCategory =
         selectedSubCategory === 'all' || product.subCategory === selectedSubCategory
       const matchesProvince = selectedProvince === 'all' || product.province === selectedProvince
@@ -98,7 +156,10 @@ function CategoryProductPage() {
   if (!category) {
     return (
       <section className="page-card">
-        <h1 className="page-title">Không tìm thấy danh mục</h1>
+        <h1 className="page-title">
+          {isLoading ? 'Đang tải dữ liệu...' : 'Không tìm thấy danh mục'}
+        </h1>
+        {hasApiError ? <p>Không kết nối được backend, đang dùng dữ liệu mẫu.</p> : null}
         <Link className="button" to="/categories">
           Quay lại danh mục
         </Link>
@@ -117,10 +178,17 @@ function CategoryProductPage() {
       </nav>
 
       <section className="category-title-panel">
-        <span>{category.productCount} sản phẩm</span>
+        <span>{category.productCount || categoryProducts.length} sản phẩm</span>
         <h1>{category.name}</h1>
         <p>{category.description}</p>
       </section>
+
+      {isLoading ? <p className="product-result-summary">Đang tải dữ liệu...</p> : null}
+      {hasApiError ? (
+        <p className="product-result-summary">
+          Không kết nối được backend, đang dùng dữ liệu mẫu.
+        </p>
+      ) : null}
 
       <section className="category-product-layout">
         <aside className="category-product-filter">
@@ -138,7 +206,7 @@ function CategoryProductPage() {
               onChange={(event) => setSelectedSubCategory(event.target.value)}
             >
               <option value="all">Tất cả</option>
-              {category.subCategories.map((subCategory) => (
+              {(category.subCategories || []).map((subCategory) => (
                 <option key={subCategory} value={subCategory}>
                   {subCategory}
                 </option>

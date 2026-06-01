@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import ProductCard from '../../components/product/ProductCard'
 import BlogCard from '../../components/blog/BlogCard'
@@ -6,6 +6,8 @@ import { mockBlogs } from '../../data/mockBlogs'
 import { mockCategories } from '../../data/mockCategories'
 import { mockCombos } from '../../data/mockCombos'
 import { mockProducts } from '../../data/mockProducts'
+import { getCategories } from '../../services/categoryService'
+import { getProducts } from '../../services/productService'
 
 const heroSlides = [
   {
@@ -36,9 +38,49 @@ const heroSlides = [
 
 function HomePage() {
   const [activeSlide, setActiveSlide] = useState(0)
-  const bestSellingProducts = mockProducts.slice(0, 8)
-  const featuredCategories = mockCategories.slice(0, 6)
+  const [products, setProducts] = useState(mockProducts)
+  const [categories, setCategories] = useState(mockCategories)
+  const [isLoading, setIsLoading] = useState(true)
+  const [hasApiError, setHasApiError] = useState(false)
+  const bestSellingProducts = products.slice(0, 8)
+  const featuredCategories = categories.slice(0, 6)
   const slide = heroSlides[activeSlide]
+
+  useEffect(() => {
+    let isMounted = true
+
+    const loadHomeData = async () => {
+      try {
+        const [apiProducts, apiCategories] = await Promise.all([getProducts(), getCategories()])
+
+        if (!isMounted) {
+          return
+        }
+
+        setProducts(apiProducts.length > 0 ? apiProducts : mockProducts)
+        setCategories(apiCategories.length > 0 ? apiCategories : mockCategories)
+        setHasApiError(false)
+      } catch {
+        if (!isMounted) {
+          return
+        }
+
+        setProducts(mockProducts)
+        setCategories(mockCategories)
+        setHasApiError(true)
+      } finally {
+        if (isMounted) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    loadHomeData()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const showPreviousSlide = () => {
     setActiveSlide((current) => (current - 1 + heroSlides.length) % heroSlides.length)
@@ -110,6 +152,12 @@ function HomePage() {
           <h2>Sản phẩm yêu thích</h2>
           <p>Các món đặc sản quen thuộc, dễ làm quà và dễ thưởng thức.</p>
         </div>
+        {isLoading ? <p className="product-result-summary">Đang tải dữ liệu...</p> : null}
+        {hasApiError ? (
+          <p className="product-result-summary">
+            Không kết nối được backend, đang dùng dữ liệu mẫu.
+          </p>
+        ) : null}
         <div className="product-grid">
           {bestSellingProducts.map((product) => (
             <ProductCard key={product.id} product={product} />

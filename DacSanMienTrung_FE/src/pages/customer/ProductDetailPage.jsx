@@ -1,27 +1,85 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import ProductCard from '../../components/product/ProductCard'
 import { mockProducts } from '../../data/mockProducts'
+import { getProductById, getProductsByCategory } from '../../services/productService'
 
 function ProductDetailPage() {
   const { id } = useParams()
-  const product = mockProducts.find((item) => item.id === id || item.slug === id)
-  const [selectedVariantId, setSelectedVariantId] = useState(product?.variants?.[0]?.id || '')
+  const fallbackProduct = useMemo(
+    () => mockProducts.find((item) => item.id === id || item.slug === id),
+    [id],
+  )
+  const [product, setProduct] = useState(fallbackProduct)
+  const [relatedProducts, setRelatedProducts] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [hasApiError, setHasApiError] = useState(false)
+  const [selectedVariantId, setSelectedVariantId] = useState(fallbackProduct?.variants?.[0]?.id || '')
   const [quantity, setQuantity] = useState(1)
+
+  useEffect(() => {
+    let isMounted = true
+
+    const fallbackRelatedProducts = fallbackProduct
+      ? mockProducts
+          .filter((item) => item.id !== fallbackProduct.id && item.categorySlug === fallbackProduct.categorySlug)
+          .slice(0, 4)
+      : []
+
+    const loadProduct = async () => {
+      setIsLoading(true)
+      setHasApiError(false)
+
+      try {
+        const apiProduct = await getProductById(id)
+        const apiRelatedProducts = apiProduct.categoryId
+          ? await getProductsByCategory(apiProduct.categoryId)
+          : []
+
+        if (!isMounted) {
+          return
+        }
+
+        setProduct(apiProduct || fallbackProduct)
+        setSelectedVariantId(apiProduct?.variants?.[0]?.id || fallbackProduct?.variants?.[0]?.id || '')
+        setQuantity(1)
+        setRelatedProducts(
+          apiRelatedProducts.filter((item) => item.id !== apiProduct.id).slice(0, 4),
+        )
+      } catch {
+        if (!isMounted) {
+          return
+        }
+
+        setProduct(fallbackProduct)
+        setSelectedVariantId(fallbackProduct?.variants?.[0]?.id || '')
+        setQuantity(1)
+        setRelatedProducts(fallbackRelatedProducts)
+        setHasApiError(true)
+      } finally {
+        if (isMounted) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    loadProduct()
+
+    return () => {
+      isMounted = false
+    }
+  }, [fallbackProduct, id])
 
   const selectedVariant = product?.variants?.find((variant) => variant.id === selectedVariantId)
   const displayPrice = selectedVariant?.price || product?.price || 0
 
-  const relatedProducts = product
-    ? mockProducts
-        .filter((item) => item.id !== product.id && item.categorySlug === product.categorySlug)
-        .slice(0, 4)
-    : []
-
   if (!product) {
     return (
       <section className="page-card">
-        <h1 className="page-title">Không tìm thấy sản phẩm</h1>
+        <h1 className="page-title">
+          {isLoading ? 'Đang tải dữ liệu...' : 'Không tìm thấy sản phẩm'}
+        </h1>
+        {hasApiError ? <p>Không kết nối được backend, đang dùng dữ liệu mẫu.</p> : null}
         <Link className="button secondary" to="/categories">
           Quay lại danh mục
         </Link>
@@ -39,6 +97,13 @@ function ProductDetailPage() {
 
   return (
     <div className="product-detail-page">
+      {isLoading ? <p className="product-result-summary">Đang tải dữ liệu...</p> : null}
+      {hasApiError ? (
+        <p className="product-result-summary">
+          Không kết nối được backend, đang dùng dữ liệu mẫu.
+        </p>
+      ) : null}
+
       <nav className="breadcrumb">
         <Link to="/">Trang chủ</Link>
         <span>›</span>
@@ -56,8 +121,8 @@ function ProductDetailPage() {
           </div>
           <div className="product-detail-thumbs">
             <span>{product.image}</span>
-            <span>{product.subCategory.slice(0, 2).toUpperCase()}</span>
-            <span>{product.province.slice(0, 2).toUpperCase()}</span>
+            <span>{(product.subCategory || product.categoryName || 'SP').slice(0, 2).toUpperCase()}</span>
+            <span>{(product.province || product.origin || 'MT').slice(0, 2).toUpperCase()}</span>
           </div>
         </div>
 
@@ -66,7 +131,7 @@ function ProductDetailPage() {
           <h1>{product.name}</h1>
           <div className="product-detail-rating">
             <span>★★★★★</span>
-            <strong>{product.rating.toFixed(1)}</strong>
+            <strong>{Number(product.rating || 5).toFixed(1)}</strong>
             <small>{product.stock} sản phẩm còn hàng</small>
           </div>
           <p className="product-detail-price">{displayPrice.toLocaleString('vi-VN')}đ</p>
@@ -75,7 +140,7 @@ function ProductDetailPage() {
           <div className="product-option-group">
             <h2>Chọn biến thể / trọng lượng</h2>
             <div className="variant-list">
-              {product.variants.map((variant) => (
+              {(product.variants || []).map((variant) => (
                 <button
                   className={variant.id === selectedVariantId ? 'active' : ''}
                   key={variant.id}

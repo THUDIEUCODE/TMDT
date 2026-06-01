@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import ProductFilter from '../../components/product/ProductFilter'
 import ProductCard from '../../components/product/ProductCard'
 import { mockCategories } from '../../data/mockCategories'
 import { mockProducts } from '../../data/mockProducts'
+import { getCategories } from '../../services/categoryService'
+import { getProducts } from '../../services/productService'
 
 function isInPriceRange(product, range) {
   if (range === 'under-100') {
@@ -39,32 +41,73 @@ function sortProducts(products, sortBy) {
 }
 
 function ProductListPage() {
+  const [products, setProducts] = useState(mockProducts)
+  const [categories, setCategories] = useState(mockCategories)
+  const [isLoading, setIsLoading] = useState(true)
+  const [hasApiError, setHasApiError] = useState(false)
   const [searchText, setSearchText] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedProvince, setSelectedProvince] = useState('all')
   const [selectedPrice, setSelectedPrice] = useState('all')
   const [sortBy, setSortBy] = useState('featured')
 
-  const provinces = useMemo(() => {
-    return [...new Set(mockProducts.map((product) => product.origin))].sort()
+  useEffect(() => {
+    let isMounted = true
+
+    const loadProducts = async () => {
+      try {
+        const [apiProducts, apiCategories] = await Promise.all([getProducts(), getCategories()])
+
+        if (!isMounted) {
+          return
+        }
+
+        setProducts(apiProducts.length > 0 ? apiProducts : mockProducts)
+        setCategories(apiCategories.length > 0 ? apiCategories : mockCategories)
+        setHasApiError(false)
+      } catch {
+        if (!isMounted) {
+          return
+        }
+
+        setProducts(mockProducts)
+        setCategories(mockCategories)
+        setHasApiError(true)
+      } finally {
+        if (isMounted) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    loadProducts()
+
+    return () => {
+      isMounted = false
+    }
   }, [])
+
+  const provinces = useMemo(() => {
+    return [...new Set(products.map((product) => product.origin || product.province).filter(Boolean))].sort()
+  }, [products])
 
   const filteredProducts = useMemo(() => {
     const keyword = searchText.trim().toLowerCase()
 
-    const products = mockProducts.filter((product) => {
+    const filteredItems = products.filter((product) => {
+      const productOrigin = product.origin || product.province || ''
       const matchesSearch =
         product.name.toLowerCase().includes(keyword) ||
-        product.origin.toLowerCase().includes(keyword)
+        productOrigin.toLowerCase().includes(keyword)
       const matchesCategory = selectedCategory === 'all' || product.categoryId === selectedCategory
-      const matchesProvince = selectedProvince === 'all' || product.origin === selectedProvince
+      const matchesProvince = selectedProvince === 'all' || productOrigin === selectedProvince
       const matchesPrice = isInPriceRange(product, selectedPrice)
 
       return matchesSearch && matchesCategory && matchesProvince && matchesPrice
     })
 
-    return sortProducts(products, sortBy)
-  }, [searchText, selectedCategory, selectedProvince, selectedPrice, sortBy])
+    return sortProducts(filteredItems, sortBy)
+  }, [products, searchText, selectedCategory, selectedProvince, selectedPrice, sortBy])
 
   const resetFilters = () => {
     setSearchText('')
@@ -86,7 +129,7 @@ function ProductListPage() {
 
       <section className="product-list-layout">
         <ProductFilter
-          categories={mockCategories}
+          categories={categories}
           provinces={provinces}
           selectedCategory={selectedCategory}
           selectedProvince={selectedProvince}
@@ -98,6 +141,13 @@ function ProductListPage() {
         />
 
         <div className="product-list-content">
+          {isLoading ? <p className="product-result-summary">Đang tải dữ liệu...</p> : null}
+          {hasApiError ? (
+            <p className="product-result-summary">
+              Không kết nối được backend, đang dùng dữ liệu mẫu.
+            </p>
+          ) : null}
+
           <div className="product-toolbar">
             <label className="product-search">
               <span>Tìm kiếm</span>
