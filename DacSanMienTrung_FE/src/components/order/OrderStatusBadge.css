@@ -24,6 +24,11 @@
   background: #f2e4f8;
 }
 
+.status-khachDaNhan {
+  color: #5b21b6;
+  background: #ede9fe;
+}
+
 .status-completed,
 .status-daGiao {
   color: #166534;

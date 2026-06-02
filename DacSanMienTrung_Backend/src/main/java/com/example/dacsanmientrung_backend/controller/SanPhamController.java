@@ -1,10 +1,15 @@
 package com.example.dacsanmientrung_backend.controller;
 
+import com.example.dacsanmientrung_backend.dto.request.SanPhamRequest;
 import com.example.dacsanmientrung_backend.dto.response.SanPhamDetailResponse;
 import com.example.dacsanmientrung_backend.dto.response.SanPhamResponse;
 import com.example.dacsanmientrung_backend.service.SanPhamService;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -46,5 +51,25 @@ public class SanPhamController {
     @GetMapping("/category-tree/{categoryId}")
     public List<SanPhamResponse> getProductsByCategoryTree(@PathVariable Integer categoryId) {
         return sanPhamService.getProductsByCategoryTree(categoryId);
+    }
+
+    @PostMapping
+    public SanPhamDetailResponse createProduct(@RequestBody SanPhamRequest request) {
+        return sanPhamService.createProduct(request);
+    }
+
+    @PutMapping("/{id}")
+    public SanPhamDetailResponse updateProduct(@PathVariable Integer id, @RequestBody SanPhamRequest request) {
+        return sanPhamService.updateProduct(id, request);
+    }
+
+    @PutMapping("/{id}/toggle")
+    public SanPhamDetailResponse toggleProduct(@PathVariable Integer id) {
+        return sanPhamService.toggleProduct(id);
+    }
+
+    @DeleteMapping("/{id}")
+    public void softDeleteProduct(@PathVariable Integer id) {
+        sanPhamService.softDeleteProduct(id);
     }
 }

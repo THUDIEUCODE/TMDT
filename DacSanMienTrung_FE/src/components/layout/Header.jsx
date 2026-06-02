@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { getCurrentUser, isLoggedIn, logout } from '../../utils/authStorage'
+import { getCurrentUser, getDefaultPathForRole, isLoggedIn, logout } from '../../utils/authStorage'
 
 const navItems = [
   { path: '/', label: 'Trang chủ', end: true },
@@ -33,6 +33,8 @@ function Header() {
     navigate('/login')
   }
 
+  const accountPath = currentUser ? getDefaultPathForRole(currentUser.role) : '/login'
+
   return (
     <header className="site-header">
       <div className="header-top">
@@ -61,7 +63,7 @@ function Header() {
           <NavLink to={currentUser ? '/cart' : '/login?redirect=/cart'}>Giỏ hàng</NavLink>
           {isLoggedIn() && currentUser ? (
             <>
-              <NavLink to="/profile">{currentUser.name || currentUser.email || 'Tài khoản'}</NavLink>
+              <NavLink to={accountPath}>{currentUser.name || currentUser.email || 'Tài khoản'}</NavLink>
               <button className="nav-logout-button" type="button" onClick={handleLogout}>
                 Đăng xuất
               </button>

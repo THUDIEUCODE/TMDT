@@ -3,10 +3,75 @@ const tokenStorageKey = 'dacsan_token'
 
 const getPayload = (payload) => payload?.data ?? payload ?? {}
 
+export const normalizeUserRole = (role) => {
+  const normalizedRole = String(role || '').trim()
+  const roleMap = {
+    customer: 'khachhang',
+    khachHang: 'khachhang',
+    khachhang: 'khachhang',
+    KHACHHANG: 'khachhang',
+    staff: 'nhanvien',
+    nhanVien: 'nhanvien',
+    nhanvien: 'nhanvien',
+    NHANVIEN: 'nhanvien',
+    admin: 'quantrivien',
+    quanTriVien: 'quantrivien',
+    quantrivien: 'quantrivien',
+    QUANTRIVIEN: 'quantrivien',
+  }
+
+  return roleMap[normalizedRole] || roleMap[normalizedRole.toLowerCase()] || normalizedRole || null
+}
+
+export const getDefaultPathForRole = (role) => {
+  const normalizedRole = normalizeUserRole(role)
+
+  if (normalizedRole === 'quantrivien') {
+    return '/admin/dashboard'
+  }
+
+  if (normalizedRole === 'nhanvien') {
+    return '/staff/dashboard'
+  }
+
+  return '/profile'
+}
+
+export const canAccessPath = (role, path = '/') => {
+  const normalizedRole = normalizeUserRole(role)
+  const pathname = String(path || '/').split('?')[0]
+
+  if (!normalizedRole) {
+    return false
+  }
+
+  if (pathname.startsWith('/admin')) {
+    return normalizedRole === 'quantrivien'
+  }
+
+  if (pathname.startsWith('/staff')) {
+    return ['nhanvien', 'quantrivien'].includes(normalizedRole)
+  }
+
+  if (
+    pathname === '/profile' ||
+    pathname === '/cart' ||
+    pathname === '/checkout' ||
+    pathname === '/payment' ||
+    pathname === '/order-success' ||
+    pathname === '/orders' ||
+    pathname.startsWith('/orders/')
+  ) {
+    return ['khachhang', 'nhanvien', 'quantrivien'].includes(normalizedRole)
+  }
+
+  return true
+}
+
 export const normalizeUser = (apiUser = {}) => {
   const user = getPayload(apiUser)
   const id = user.maNguoiDung ?? user.id ?? user.userId
-  const role = user.vaiTro ?? user.role ?? user.loaiTaiKhoan ?? 'khachhang'
+  const role = normalizeUserRole(user.vaiTro ?? user.role ?? user.loaiTaiKhoan ?? 'khachhang')
 
   return {
     ...user,
@@ -41,7 +106,12 @@ export const saveAuth = (loginResponse) => {
 export const getCurrentUser = () => {
   try {
     const storedUser = localStorage.getItem(userStorageKey)
-    return storedUser ? normalizeUser(JSON.parse(storedUser)) : null
+    if (!storedUser) {
+      return null
+    }
+
+    const user = normalizeUser(JSON.parse(storedUser))
+    return user && (user.id || user.email || user.name) ? user : null
   } catch {
     return null
   }
@@ -50,6 +120,11 @@ export const getCurrentUser = () => {
 export const getCurrentUserId = () => {
   const user = getCurrentUser()
   return user?.maNguoiDung ?? user?.id ?? null
+}
+
+export const getCurrentUserRole = () => {
+  const user = getCurrentUser()
+  return normalizeUserRole(user?.vaiTro ?? user?.role) || null
 }
 
 export const getToken = () => localStorage.getItem(tokenStorageKey) || ''

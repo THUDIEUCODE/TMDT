@@ -1,22 +1,8 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { login } from '../../services/authService'
-import { saveAuth } from '../../utils/authStorage'
+import { canAccessPath, getDefaultPathForRole, saveAuth } from '../../utils/authStorage'
 import './LoginPage.css'
-
-const getRedirectPath = (role = '') => {
-  const normalizedRole = String(role).toLowerCase()
-
-  if (normalizedRole === 'quantrivien' || normalizedRole === 'admin') {
-    return '/admin/dashboard'
-  }
-
-  if (normalizedRole === 'nhanvien' || normalizedRole === 'staff') {
-    return '/staff/dashboard'
-  }
-
-  return '/profile'
-}
 
 function LoginPage() {
   const navigate = useNavigate()
@@ -55,8 +41,13 @@ function LoginPage() {
       })
       const user = saveAuth(response)
       const redirectPath = searchParams.get('redirect')
+      const defaultPath = getDefaultPathForRole(user.role)
+      const nextPath =
+        redirectPath && redirectPath.startsWith('/') && canAccessPath(user.role, redirectPath)
+          ? redirectPath
+          : defaultPath
       setMessage('Đăng nhập thành công.')
-      navigate(redirectPath || getRedirectPath(user.role))
+      navigate(nextPath)
     } catch (error) {
       setMessage(error?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.')
     } finally {

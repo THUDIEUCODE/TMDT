@@ -3,13 +3,17 @@ import OrderStatusBadge from '../../components/order/OrderStatusBadge'
 import { mockOrders } from '../../data/mockOrders'
 import {
   cancelOrder,
+  confirmBankTransfer,
   getAllOrders,
   getOrderById,
   normalizeOrderStatus,
   orderStatusLabels,
   orderStatusOptions,
+  paymentMethodLabels,
+  paymentStatusLabels,
   updateOrderStatus,
 } from '../../services/orderService'
+import { getCurrentUser } from '../../utils/authStorage'
 import './OrderManagementPage.css'
 
 const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`
@@ -28,6 +32,11 @@ const normalizeMockOrder = (order) => ({
   customerName: order.customerName || order.receiverName,
   phone: order.phone || order.receiverPhone,
   paymentStatus: order.paymentStatus || 'Đang cập nhật',
+  paymentMethod: order.paymentMethod || 'COD',
+  transactionCode: order.transactionCode || '',
+  paidAt: order.paidAt || '',
+  processedBy: order.processedBy || '',
+  processingNote: order.processingNote || '',
   itemCount: order.itemCount || order.items.length,
   subtotal: order.subtotal ?? order.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
   total:
@@ -52,6 +61,7 @@ const statusStatItems = [
   { key: 'choXacNhan', label: orderStatusLabels.choXacNhan },
   { key: 'daXacNhan', label: orderStatusLabels.daXacNhan },
   { key: 'dangGiao', label: orderStatusLabels.dangGiao },
+  { key: 'khachDaNhan', label: orderStatusLabels.khachDaNhan },
   { key: 'daGiao', label: orderStatusLabels.daGiao },
   { key: 'daHuy', label: orderStatusLabels.daHuy },
   { key: 'dangHoanHang', label: orderStatusLabels.dangHoanHang },
@@ -63,7 +73,9 @@ function OrderManagementPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [detailOrder, setDetailOrder] = useState(null)
   const [cancelTargetOrder, setCancelTargetOrder] = useState(null)
+  const [bankTransferTargetOrder, setBankTransferTargetOrder] = useState(null)
   const [cancelReason, setCancelReason] = useState('')
+  const [bankTransferForm, setBankTransferForm] = useState({ maGiaoDich: '', ghiChuXuLy: '' })
   const [isLoading, setIsLoading] = useState(true)
   const [isDetailLoading, setIsDetailLoading] = useState(false)
   const [pendingActionId, setPendingActionId] = useState('')
@@ -110,6 +122,7 @@ function OrderManagementPage() {
         choXacNhan: 0,
         daXacNhan: 0,
         dangGiao: 0,
+        khachDaNhan: 0,
         daGiao: 0,
         daHuy: 0,
         dangHoanHang: 0,
@@ -195,45 +208,112 @@ function OrderManagementPage() {
     }
   }
 
-  const renderActions = (order) => (
-    <div className="staff-order-actions">
-      <button type="button" onClick={() => openDetailModal(order)}>
-        Xem chi tiết
-      </button>
-      {order.status === 'choXacNhan' ? (
-        <>
+  const openBankTransferModal = (order) => {
+    setBankTransferTargetOrder(order)
+    setBankTransferForm({
+      maGiaoDich: order.transactionCode || '',
+      ghiChuXuLy: order.processingNote || '',
+    })
+    setActionError('')
+    setActionMessage('')
+  }
+
+  const submitBankTransferConfirmation = async (event) => {
+    event.preventDefault()
+    setActionError('')
+    setActionMessage('')
+
+    if (!bankTransferForm.maGiaoDich.trim()) {
+      setActionError('Vui lòng nhập mã giao dịch chuyển khoản.')
+      return
+    }
+
+    try {
+      const currentUser = getCurrentUser()
+      const maNhanVienXuLy = currentUser?.maNguoiDung || currentUser?.id || 3
+
+      setPendingActionId(bankTransferTargetOrder.id)
+      const updatedOrder = await confirmBankTransfer(bankTransferTargetOrder.id, {
+        maNhanVienXuLy,
+        maGiaoDich: bankTransferForm.maGiaoDich.trim(),
+        ghiChuXuLy: bankTransferForm.ghiChuXuLy.trim(),
+      })
+      setBankTransferTargetOrder(null)
+      setBankTransferForm({ maGiaoDich: '', ghiChuXuLy: '' })
+      setActionMessage('Đã xác nhận nhận chuyển khoản.')
+      if (detailOrder && String(detailOrder.id) === String(updatedOrder.id)) {
+        setDetailOrder(updatedOrder)
+      }
+      await loadOrders({ silent: true })
+    } catch (error) {
+      setActionError(error?.message || 'Không thể xác nhận chuyển khoản.')
+    } finally {
+      setPendingActionId('')
+    }
+  }
+
+  const renderActions = (order) => {
+    const canConfirmOrder =
+      order.status === 'choXacNhan' &&
+      (order.paymentMethod === 'COD' ||
+        (order.paymentMethod === 'chuyenKhoan' && order.paymentStatus === 'thanhCong') ||
+        (order.paymentMethod === 'vi' && order.paymentStatus === 'thanhCong'))
+    const canConfirmBankTransfer =
+      order.status === 'choXacNhan' &&
+      order.paymentMethod === 'chuyenKhoan' &&
+      order.paymentStatus === 'choThanhToan'
+
+    return (
+      <div className="staff-order-actions">
+        <button type="button" onClick={() => openDetailModal(order)}>
+          Xem chi tiết
+        </button>
+        {canConfirmOrder ? (
           <button
             type="button"
             disabled={pendingActionId === order.id}
             onClick={() => changeOrderStatus(order, 'daXacNhan')}
           >
-            Xác nhận
+            Xác nhận đơn
           </button>
+        ) : null}
+        {canConfirmBankTransfer ? (
+          <button type="button" disabled={pendingActionId === order.id} onClick={() => openBankTransferModal(order)}>
+            Xác nhận đã nhận chuyển khoản
+          </button>
+        ) : null}
+        {order.status === 'choXacNhan' && order.paymentMethod === 'vi' && order.paymentStatus === 'choThanhToan' ? (
+          <span className="staff-order-action-note">Chờ khách thanh toán ví</span>
+        ) : null}
+        {order.status === 'choXacNhan' ? (
           <button type="button" disabled={pendingActionId === order.id} onClick={() => openCancelModal(order)}>
             Hủy đơn
           </button>
-        </>
-      ) : null}
-      {order.status === 'daXacNhan' ? (
-        <button
-          type="button"
-          disabled={pendingActionId === order.id}
-          onClick={() => changeOrderStatus(order, 'dangGiao')}
-        >
-          Giao hàng
-        </button>
-      ) : null}
-      {order.status === 'dangGiao' ? (
-        <button
-          type="button"
-          disabled={pendingActionId === order.id}
-          onClick={() => changeOrderStatus(order, 'daGiao')}
-        >
-          Hoàn tất
-        </button>
-      ) : null}
-    </div>
-  )
+        ) : null}
+        {order.status === 'daXacNhan' ? (
+          <button
+            type="button"
+            disabled={pendingActionId === order.id}
+            onClick={() => changeOrderStatus(order, 'dangGiao')}
+          >
+            Giao hàng
+          </button>
+        ) : null}
+        {order.status === 'dangGiao' ? (
+          <span className="staff-order-action-note">Chờ khách xác nhận đã nhận hàng.</span>
+        ) : null}
+        {order.status === 'khachDaNhan' ? (
+          <button
+            type="button"
+            disabled={pendingActionId === order.id}
+            onClick={() => changeOrderStatus(order, 'daGiao')}
+          >
+            Hoàn tất đơn
+          </button>
+        ) : null}
+      </div>
+    )
+  }
 
   return (
     <div className="order-management-page">
@@ -310,8 +390,8 @@ function OrderManagementPage() {
               <span>{order.phone}</span>
               <span>{formatDate(order.orderDate)}</span>
               <b>{formatCurrency(order.total)}</b>
-              <span>{order.paymentMethod || 'Đang cập nhật'}</span>
-              <span>{order.paymentStatus || 'Đang cập nhật'}</span>
+              <span>{paymentMethodLabels[order.paymentMethod] || order.paymentMethod || 'Đang cập nhật'}</span>
+              <span>{paymentStatusLabels[order.paymentStatus] || order.paymentStatus || 'Đang cập nhật'}</span>
               <OrderStatusBadge status={order.status} />
               {renderActions(order)}
             </article>
@@ -357,6 +437,47 @@ function OrderManagementPage() {
         </div>
       ) : null}
 
+      {bankTransferTargetOrder ? (
+        <div className="staff-order-modal-backdrop" role="presentation">
+          <form className="staff-order-modal" onSubmit={submitBankTransferConfirmation}>
+            <div className="staff-order-modal-heading">
+              <span>Xác nhận chuyển khoản</span>
+              <h2>{bankTransferTargetOrder.code || bankTransferTargetOrder.id}</h2>
+            </div>
+            <label>
+              Mã giao dịch
+              <input
+                required
+                value={bankTransferForm.maGiaoDich}
+                onChange={(event) =>
+                  setBankTransferForm((current) => ({ ...current, maGiaoDich: event.target.value }))
+                }
+                placeholder="VD: CK-DH123"
+              />
+            </label>
+            <label>
+              Ghi chú xử lý
+              <textarea
+                rows="3"
+                value={bankTransferForm.ghiChuXuLy}
+                onChange={(event) =>
+                  setBankTransferForm((current) => ({ ...current, ghiChuXuLy: event.target.value }))
+                }
+                placeholder="Đã đối soát với sao kê ngân hàng"
+              />
+            </label>
+            <div className="staff-order-modal-actions">
+              <button type="button" onClick={() => setBankTransferTargetOrder(null)}>
+                Đóng
+              </button>
+              <button className="button" type="submit" disabled={pendingActionId === bankTransferTargetOrder.id}>
+                Xác nhận đã nhận chuyển khoản
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : null}
+
       {detailOrder ? (
         <div className="staff-order-modal-backdrop" role="presentation">
           <section className="staff-order-modal staff-order-detail-modal">
@@ -378,7 +499,11 @@ function OrderManagementPage() {
               </div>
               <div>
                 <span>Trạng thái thanh toán</span>
-                <strong>{detailOrder.paymentStatus || 'Đang cập nhật'}</strong>
+                <strong>{paymentStatusLabels[detailOrder.paymentStatus] || detailOrder.paymentStatus || 'Đang cập nhật'}</strong>
+              </div>
+              <div>
+                <span>Phương thức thanh toán</span>
+                <strong>{paymentMethodLabels[detailOrder.paymentMethod] || detailOrder.paymentMethod || 'Đang cập nhật'}</strong>
               </div>
               <div>
                 <span>Người nhận</span>
@@ -400,10 +525,30 @@ function OrderManagementPage() {
                 <span>Tỉnh/thành</span>
                 <strong>{detailOrder.province || 'Đang cập nhật'}</strong>
               </div>
-              <div>
-                <span>Phương thức thanh toán</span>
-                <strong>{detailOrder.paymentMethod || 'Đang cập nhật'}</strong>
-              </div>
+              {detailOrder.transactionCode ? (
+                <div>
+                  <span>Mã giao dịch</span>
+                  <strong>{detailOrder.transactionCode}</strong>
+                </div>
+              ) : null}
+              {detailOrder.paidAt ? (
+                <div>
+                  <span>Ngày thanh toán</span>
+                  <strong>{formatDate(detailOrder.paidAt)}</strong>
+                </div>
+              ) : null}
+              {detailOrder.processedBy ? (
+                <div>
+                  <span>Nhân viên xử lý</span>
+                  <strong>{detailOrder.processedBy}</strong>
+                </div>
+              ) : null}
+              {detailOrder.processingNote ? (
+                <div className="staff-order-detail-full">
+                  <span>Ghi chú xử lý</span>
+                  <strong>{detailOrder.processingNote}</strong>
+                </div>
+              ) : null}
               <div>
                 <span>Ghi chú giao hàng</span>
                 <strong>{detailOrder.note || 'Không có'}</strong>
@@ -462,6 +607,13 @@ function OrderManagementPage() {
             </div>
 
             <div className="staff-order-modal-actions">
+              {detailOrder.status === 'choXacNhan' &&
+              detailOrder.paymentMethod === 'chuyenKhoan' &&
+              detailOrder.paymentStatus === 'choThanhToan' ? (
+                <button type="button" onClick={() => openBankTransferModal(detailOrder)}>
+                  Xác nhận đã nhận chuyển khoản
+                </button>
+              ) : null}
               <button type="button" onClick={() => setDetailOrder(null)}>
                 Đóng
               </button>

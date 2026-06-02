@@ -26,12 +26,14 @@ export const orderStatusLabels = {
   choXacNhan: 'Chờ xác nhận',
   daXacNhan: 'Đã xác nhận',
   dangGiao: 'Đang giao',
+  khachDaNhan: 'Khách đã nhận hàng',
   daGiao: 'Đã giao',
   daHuy: 'Đã hủy',
   dangHoanHang: 'Đang hoàn hàng',
   pending: 'Chờ xác nhận',
   confirmed: 'Đã xác nhận',
   shipping: 'Đang giao',
+  customerReceived: 'Khách đã nhận hàng',
   completed: 'Đã giao',
   cancelled: 'Đã hủy',
   returning: 'Đang hoàn hàng',
@@ -42,6 +44,7 @@ export const orderStatusOptions = [
   { value: 'choXacNhan', label: orderStatusLabels.choXacNhan },
   { value: 'daXacNhan', label: orderStatusLabels.daXacNhan },
   { value: 'dangGiao', label: orderStatusLabels.dangGiao },
+  { value: 'khachDaNhan', label: orderStatusLabels.khachDaNhan },
   { value: 'daGiao', label: orderStatusLabels.daGiao },
   { value: 'daHuy', label: orderStatusLabels.daHuy },
   { value: 'dangHoanHang', label: orderStatusLabels.dangHoanHang },
@@ -52,12 +55,25 @@ export const normalizeOrderStatus = (status) => {
     pending: 'choXacNhan',
     confirmed: 'daXacNhan',
     shipping: 'dangGiao',
+    customerReceived: 'khachDaNhan',
     completed: 'daGiao',
     cancelled: 'daHuy',
     returning: 'dangHoanHang',
   }
 
   return statusMap[status] || status || 'choXacNhan'
+}
+
+export const paymentStatusLabels = {
+  choThanhToan: 'Chờ thanh toán',
+  thanhCong: 'Thanh toán thành công',
+  thatBai: 'Thanh toán thất bại',
+}
+
+export const paymentMethodLabels = {
+  COD: 'Thanh toán khi nhận hàng',
+  chuyenKhoan: 'Chuyển khoản ngân hàng',
+  vi: 'Ví điện tử',
 }
 
 const createInitials = (value) =>
@@ -126,6 +142,10 @@ export const mapOrderFromApi = (apiOrder = {}) => {
     district: order.quanHuyen ?? order.district ?? '',
     province: order.tinhThanhGiaoHang ?? order.province ?? '',
     paymentMethod: order.phuongThucThanhToan ?? order.paymentMethod ?? 'COD',
+    transactionCode: order.maGiaoDich ?? order.transactionCode ?? '',
+    paidAt: order.ngayThanhToan ?? order.paidAt ?? '',
+    processedBy: order.maNhanVienXuLy ?? order.nhanVienXuLy ?? order.processedBy ?? '',
+    processingNote: order.ghiChuXuLy ?? order.processingNote ?? '',
     note: order.ghiChuGiaoHang ?? order.ghiChu ?? order.note ?? '',
     cancelReason: order.lyDoHuy ?? order.cancelReason ?? '',
     returnReason: order.lyDoHoanHang ?? order.returnReason ?? '',
@@ -178,5 +198,20 @@ export const updateOrderStatus = async (maDonHang, status) => {
 
 export const cancelOrder = async (maDonHang, data) => {
   const payload = await putApi(`/orders/${maDonHang}/cancel`, data)
+  return mapOrderFromApi(payload)
+}
+
+export const confirmReceived = async (maDonHang, data) => {
+  const payload = await putApi(`/orders/${maDonHang}/confirm-received`, data)
+  return mapOrderFromApi(payload)
+}
+
+export const confirmBankTransfer = async (maDonHang, data) => {
+  const payload = await putApi(`/orders/${maDonHang}/confirm-bank-transfer`, data)
+  return mapOrderFromApi(payload)
+}
+
+export const confirmWalletPayment = async (maDonHang, data) => {
+  const payload = await putApi(`/orders/${maDonHang}/confirm-wallet-payment`, data)
   return mapOrderFromApi(payload)
 }

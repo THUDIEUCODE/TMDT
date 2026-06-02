@@ -1,83 +1,190 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { mockUsers } from '../../data/mockUsers'
+import {
+  changeUserRole,
+  createUser,
+  deleteUser,
+  getUserById,
+  getUsers,
+  lockUser,
+  mapUserFromApi,
+  normalizeUserRole,
+  normalizeUserStatus,
+  roleLabels,
+  statusLabels,
+  unlockUser,
+  updateUser,
+} from '../../services/userService'
 import './AccountManagementPage.css'
 
-const roleLabels = {
-  customer: 'Khách hàng',
-  staff: 'Nhân viên',
-  admin: 'Quản trị viên',
-}
+const roleOptions = [
+  { value: 'all', label: 'Tất cả' },
+  { value: 'khachhang', label: roleLabels.khachhang },
+  { value: 'nhanvien', label: roleLabels.nhanvien },
+  { value: 'quantrivien', label: roleLabels.quantrivien },
+]
 
-const statusLabels = {
-  active: 'Đang hoạt động',
-  locked: 'Đã khóa',
-}
+const statusOptions = [
+  { value: 'all', label: 'Tất cả' },
+  { value: 'active', label: statusLabels.active },
+  { value: 'locked', label: statusLabels.locked },
+]
 
 const emptyForm = {
-  name: '',
+  hoTen: '',
   email: '',
-  phone: '',
-  role: 'customer',
-  status: 'active',
-  tempPassword: '',
+  matKhau: '',
+  soDienThoai: '',
+  ngaySinh: '',
+  vaiTro: 'khachhang',
+  trangThai: 'active',
+  phanLoaiKhachHang: '',
+  chucVu: '',
 }
 
+const getUserKey = (user) => user.maNguoiDung ?? user.id
+
+const createInitial = (value) =>
+  String(value || 'TK')
+    .trim()
+    .charAt(0)
+    .toUpperCase()
+
+const toDateInputValue = (value) => {
+  if (!value) {
+    return ''
+  }
+
+  const text = String(value)
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+    return text
+  }
+
+  const match = text.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+  return match ? `${match[3]}-${match[2]}-${match[1]}` : ''
+}
+
+const createFallbackUsers = () => mockUsers.map(mapUserFromApi)
+
+const filterUsersLocal = (users, filters) => {
+  const keyword = filters.keyword.trim().toLowerCase()
+
+  return users.filter((user) => {
+    const matchesKeyword =
+      !keyword ||
+      user.fullName.toLowerCase().includes(keyword) ||
+      user.email.toLowerCase().includes(keyword) ||
+      user.phone.toLowerCase().includes(keyword)
+    const matchesRole = filters.role === 'all' || user.role === filters.role
+    const matchesStatus = filters.status === 'all' || user.status === filters.status
+
+    return matchesKeyword && matchesRole && matchesStatus
+  })
+}
+
+const createCreatePayload = (formData) => ({
+  hoTen: formData.hoTen.trim(),
+  email: formData.email.trim(),
+  matKhau: formData.matKhau,
+  soDienThoai: formData.soDienThoai.trim(),
+  ngaySinh: formData.ngaySinh || null,
+  vaiTro: formData.vaiTro,
+  trangThai: formData.trangThai === 'active',
+  phanLoaiKhachHang: formData.phanLoaiKhachHang.trim(),
+  chucVu: formData.chucVu.trim(),
+})
+
+const createUpdatePayload = (formData) => ({
+  hoTen: formData.hoTen.trim(),
+  soDienThoai: formData.soDienThoai.trim(),
+  ngaySinh: formData.ngaySinh || null,
+  vaiTro: formData.vaiTro,
+  trangThai: formData.trangThai === 'active',
+  phanLoaiKhachHang: formData.phanLoaiKhachHang.trim(),
+  chucVu: formData.chucVu.trim(),
+})
+
 function AccountManagementPage() {
-  const [users, setUsers] = useState(mockUsers)
+  const fallbackUsers = useMemo(createFallbackUsers, [])
+  const [users, setUsers] = useState(fallbackUsers)
   const [searchTerm, setSearchTerm] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
+  const [actionMessage, setActionMessage] = useState('')
+  const [actionError, setActionError] = useState('')
   const [modalMode, setModalMode] = useState(null)
   const [editingUserId, setEditingUserId] = useState(null)
   const [formData, setFormData] = useState(emptyForm)
   const [detailUser, setDetailUser] = useState(null)
   const [roleUser, setRoleUser] = useState(null)
-  const [selectedRole, setSelectedRole] = useState('customer')
+  const [roleForm, setRoleForm] = useState({ vaiTro: 'khachhang', chucVu: '' })
+
+  const filters = useMemo(
+    () => ({
+      keyword: searchTerm.trim(),
+      role: roleFilter,
+      status: statusFilter,
+    }),
+    [roleFilter, searchTerm, statusFilter],
+  )
+
+  const loadUsers = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const data = await getUsers(filters)
+      setUsers(data)
+      setErrorMessage('')
+    } catch (error) {
+      setUsers(filterUsersLocal(fallbackUsers, filters))
+      setErrorMessage('Không kết nối được backend, đang dùng dữ liệu mẫu.')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [fallbackUsers, filters])
+
+  useEffect(() => {
+    loadUsers()
+  }, [loadUsers])
 
   const stats = useMemo(() => {
     return users.reduce(
       (result, user) => {
         result.total += 1
-        result[user.role] += 1
-        result[user.status] += 1
+        result[user.role] = (result[user.role] || 0) + 1
+        result[user.status] = (result[user.status] || 0) + 1
         return result
       },
-      { total: 0, customer: 0, staff: 0, admin: 0, active: 0, locked: 0 },
+      { total: 0, khachhang: 0, nhanvien: 0, quantrivien: 0, active: 0, locked: 0 },
     )
   }, [users])
 
-  const filteredUsers = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase()
-
-    return users.filter((user) => {
-      const matchesSearch =
-        !normalizedSearch ||
-        user.name.toLowerCase().includes(normalizedSearch) ||
-        user.email.toLowerCase().includes(normalizedSearch) ||
-        user.phone.toLowerCase().includes(normalizedSearch)
-      const matchesRole = roleFilter === 'all' || user.role === roleFilter
-      const matchesStatus = statusFilter === 'all' || user.status === statusFilter
-
-      return matchesSearch && matchesRole && matchesStatus
-    })
-  }, [roleFilter, searchTerm, statusFilter, users])
-
   const openAddModal = () => {
+    setActionError('')
+    setActionMessage('')
     setModalMode('add')
     setEditingUserId(null)
     setFormData(emptyForm)
   }
 
   const openEditModal = (user) => {
+    setActionError('')
+    setActionMessage('')
     setModalMode('edit')
-    setEditingUserId(user.id)
+    setEditingUserId(getUserKey(user))
     setFormData({
-      name: user.name,
+      hoTen: user.fullName,
       email: user.email,
-      phone: user.phone,
-      role: user.role,
-      status: user.status,
-      tempPassword: '',
+      matKhau: '',
+      soDienThoai: user.phone,
+      ngaySinh: toDateInputValue(user.birthday),
+      vaiTro: user.role,
+      trangThai: user.status,
+      phanLoaiKhachHang: user.customerRank || '',
+      chucVu: user.position || '',
     })
   }
 
@@ -85,6 +192,7 @@ function AccountManagementPage() {
     setModalMode(null)
     setEditingUserId(null)
     setFormData(emptyForm)
+    setActionError('')
   }
 
   const handleFormChange = (event) => {
@@ -92,72 +200,141 @@ function AccountManagementPage() {
     setFormData((current) => ({ ...current, [name]: value }))
   }
 
-  const saveUser = (event) => {
-    event.preventDefault()
-
-    const nextUserData = {
-      name: formData.name.trim(),
-      email: formData.email.trim(),
-      phone: formData.phone.trim(),
-      role: formData.role,
-      status: formData.status,
+  const validateForm = () => {
+    if (!formData.hoTen.trim()) {
+      return 'Họ tên không được rỗng.'
     }
 
-    if (modalMode === 'edit') {
-      setUsers((currentUsers) =>
-        currentUsers.map((user) =>
-          user.id === editingUserId ? { ...user, ...nextUserData } : user,
-        ),
-      )
-    } else {
-      setUsers((currentUsers) => [
-        {
-          ...nextUserData,
-          id: `U${Date.now()}`,
-          createdAt: new Date().toLocaleDateString('vi-VN'),
-          lastLogin: 'Chưa đăng nhập',
-          orderCount: 0,
-          note: formData.tempPassword
-            ? `Mật khẩu tạm thời đã cấp: ${formData.tempPassword}`
-            : 'Tài khoản mới tạo.',
-        },
-        ...currentUsers,
-      ])
-    }
+    if (modalMode === 'add') {
+      if (!formData.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+        return 'Email không hợp lệ.'
+      }
 
-    closeFormModal()
-  }
-
-  const toggleLockUser = (user) => {
-    if (user.status === 'active') {
-      const confirmed = window.confirm(`Khóa tài khoản ${user.name}?`)
-      if (!confirmed) {
-        return
+      if (!formData.matKhau || formData.matKhau.length < 6) {
+        return 'Mật khẩu tối thiểu 6 ký tự.'
       }
     }
 
-    setUsers((currentUsers) =>
-      currentUsers.map((item) =>
-        item.id === user.id
-          ? { ...item, status: item.status === 'locked' ? 'active' : 'locked' }
-          : item,
-      ),
-    )
+    if (!formData.vaiTro) {
+      return 'Vai trò bắt buộc.'
+    }
+
+    return ''
+  }
+
+  const saveUser = async (event) => {
+    event.preventDefault()
+    const validationMessage = validateForm()
+
+    if (validationMessage) {
+      setActionError(validationMessage)
+      return
+    }
+
+    setIsSaving(true)
+    setActionError('')
+
+    try {
+      if (modalMode === 'edit') {
+        await updateUser(editingUserId, createUpdatePayload(formData))
+        setActionMessage('Đã cập nhật tài khoản.')
+      } else {
+        await createUser(createCreatePayload(formData))
+        setActionMessage('Đã thêm tài khoản.')
+      }
+
+      closeFormModal()
+      await loadUsers()
+    } catch (error) {
+      setActionError(error.message || 'Thao tác tài khoản thất bại.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const openDetailModal = async (user) => {
+    setActionError('')
+    setDetailUser(user)
+
+    try {
+      const data = await getUserById(getUserKey(user))
+      setDetailUser(data)
+    } catch (error) {
+      setActionError(error.message || 'Không tải được chi tiết tài khoản.')
+    }
+  }
+
+  const handleLockToggle = async (user) => {
+    const userId = getUserKey(user)
+    const isLocked = user.status === 'locked'
+
+    if (!isLocked && !window.confirm('Bạn có chắc muốn khóa tài khoản này?')) {
+      return
+    }
+
+    setIsSaving(true)
+    setActionError('')
+
+    try {
+      if (isLocked) {
+        await unlockUser(userId)
+        setActionMessage('Đã mở khóa tài khoản.')
+      } else {
+        await lockUser(userId)
+        setActionMessage('Đã khóa tài khoản.')
+      }
+
+      await loadUsers()
+    } catch (error) {
+      setActionError(error.message || 'Không cập nhật được trạng thái tài khoản.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const openRoleModal = (user) => {
+    setActionError('')
     setRoleUser(user)
-    setSelectedRole(user.role)
+    setRoleForm({ vaiTro: user.role, chucVu: user.position || '' })
   }
 
-  const saveRole = (event) => {
+  const saveRole = async (event) => {
     event.preventDefault()
-    setUsers((currentUsers) =>
-      currentUsers.map((user) =>
-        user.id === roleUser.id ? { ...user, role: selectedRole } : user,
-      ),
-    )
-    setRoleUser(null)
+    setIsSaving(true)
+    setActionError('')
+
+    try {
+      await changeUserRole(getUserKey(roleUser), {
+        vaiTro: normalizeUserRole(roleForm.vaiTro),
+        chucVu: roleForm.chucVu.trim(),
+      })
+      setRoleUser(null)
+      setActionMessage('Đã đổi vai trò tài khoản.')
+      await loadUsers()
+    } catch (error) {
+      setActionError(error.message || 'Không đổi được vai trò tài khoản.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleDeleteUser = async (user) => {
+    if (!window.confirm('Bạn có chắc muốn xóa mềm tài khoản này?')) {
+      return
+    }
+
+    setIsSaving(true)
+    setActionError('')
+
+    try {
+      await deleteUser(getUserKey(user))
+      setActionMessage('Đã xóa mềm tài khoản.')
+      await loadUsers()
+    } catch (error) {
+      setActionError(error.message || 'Không xóa được tài khoản.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -173,6 +350,11 @@ function AccountManagementPage() {
         </button>
       </section>
 
+      {isLoading ? <div className="account-message">Đang tải tài khoản...</div> : null}
+      {errorMessage ? <div className="account-message account-message-warning">{errorMessage}</div> : null}
+      {actionMessage ? <div className="account-message account-message-success">{actionMessage}</div> : null}
+      {actionError ? <div className="account-message account-message-error">{actionError}</div> : null}
+
       <section className="account-stat-grid">
         <article>
           <span>Tổng tài khoản</span>
@@ -180,15 +362,15 @@ function AccountManagementPage() {
         </article>
         <article>
           <span>Khách hàng</span>
-          <strong>{stats.customer}</strong>
+          <strong>{stats.khachhang}</strong>
         </article>
         <article>
           <span>Nhân viên</span>
-          <strong>{stats.staff}</strong>
+          <strong>{stats.nhanvien}</strong>
         </article>
         <article>
           <span>Quản trị viên</span>
-          <strong>{stats.admin}</strong>
+          <strong>{stats.quantrivien}</strong>
         </article>
         <article>
           <span>Đang hoạt động</span>
@@ -212,10 +394,9 @@ function AccountManagementPage() {
         <label>
           Vai trò
           <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
-            <option value="all">Tất cả</option>
-            {Object.entries(roleLabels).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
+            {roleOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
             ))}
           </select>
@@ -223,10 +404,9 @@ function AccountManagementPage() {
         <label>
           Trạng thái
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-            <option value="all">Tất cả</option>
-            {Object.entries(statusLabels).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
+            {statusOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
             ))}
           </select>
@@ -235,8 +415,8 @@ function AccountManagementPage() {
 
       <section className="account-table-card">
         <div className="account-table-summary">
-          <strong>{filteredUsers.length} tài khoản</strong>
-          <span>Dữ liệu mock, thao tác cập nhật bằng state nội bộ.</span>
+          <strong>{users.length} tài khoản</strong>
+          <span>{errorMessage ? 'Đang hiển thị dữ liệu mẫu.' : 'Dữ liệu đồng bộ từ backend.'}</span>
         </div>
 
         <div className="account-table">
@@ -246,40 +426,49 @@ function AccountManagementPage() {
             <span>Email</span>
             <span>Số điện thoại</span>
             <span>Vai trò</span>
-            <span>Ngày tạo</span>
+            <span>Chức vụ/Hạng</span>
+            <span>Ngày đăng ký</span>
             <span>Trạng thái</span>
             <span>Thao tác</span>
           </div>
 
-          {filteredUsers.map((user) => (
-            <article className="account-table-row" key={user.id}>
-              <div className="account-avatar">{user.name.charAt(0)}</div>
-              <strong>{user.name}</strong>
-              <span>{user.email}</span>
-              <span>{user.phone}</span>
-              <span className={`account-role account-role-${user.role}`}>
-                {roleLabels[user.role]}
-              </span>
-              <span>{user.createdAt}</span>
-              <span className={`account-status account-status-${user.status}`}>
-                {statusLabels[user.status]}
-              </span>
-              <div className="account-actions">
-                <button type="button" onClick={() => setDetailUser(user)}>
-                  Xem chi tiết
-                </button>
-                <button type="button" onClick={() => openEditModal(user)}>
-                  Sửa
-                </button>
-                <button type="button" onClick={() => toggleLockUser(user)}>
-                  {user.status === 'locked' ? 'Mở khóa' : 'Khóa'}
-                </button>
-                <button type="button" onClick={() => openRoleModal(user)}>
-                  Đổi vai trò
-                </button>
-              </div>
-            </article>
-          ))}
+          {users.length ? (
+            users.map((user) => (
+              <article className="account-table-row" key={getUserKey(user)}>
+                <div className="account-avatar">{createInitial(user.fullName)}</div>
+                <strong>{user.fullName || '-'}</strong>
+                <span>{user.email || '-'}</span>
+                <span>{user.phone || '-'}</span>
+                <span className={`account-role account-role-${user.role}`}>
+                  {roleLabels[user.role] || user.role}
+                </span>
+                <span>{user.position || user.customerRank || '-'}</span>
+                <span>{user.createdAt || '-'}</span>
+                <span className={`account-status account-status-${user.status}`}>
+                  {statusLabels[user.status] || user.status}
+                </span>
+                <div className="account-actions">
+                  <button type="button" disabled={isSaving} onClick={() => openDetailModal(user)}>
+                    Xem chi tiết
+                  </button>
+                  <button type="button" disabled={isSaving} onClick={() => openEditModal(user)}>
+                    Sửa
+                  </button>
+                  <button type="button" disabled={isSaving} onClick={() => handleLockToggle(user)}>
+                    {user.status === 'locked' ? 'Mở khóa' : 'Khóa'}
+                  </button>
+                  <button type="button" disabled={isSaving} onClick={() => openRoleModal(user)}>
+                    Đổi vai trò
+                  </button>
+                  <button type="button" disabled={isSaving} onClick={() => handleDeleteUser(user)}>
+                    Xóa
+                  </button>
+                </div>
+              </article>
+            ))
+          ) : (
+            <p className="account-empty-state">Không có tài khoản phù hợp.</p>
+          )}
         </div>
       </section>
 
@@ -294,55 +483,64 @@ function AccountManagementPage() {
             <div className="account-form-grid">
               <label>
                 Họ tên
-                <input required name="name" value={formData.name} onChange={handleFormChange} />
+                <input name="hoTen" value={formData.hoTen} onChange={handleFormChange} />
               </label>
-              <label>
-                Email
-                <input required name="email" type="email" value={formData.email} onChange={handleFormChange} />
-              </label>
+              {modalMode === 'add' ? (
+                <>
+                  <label>
+                    Email
+                    <input name="email" type="email" value={formData.email} onChange={handleFormChange} />
+                  </label>
+                  <label>
+                    Mật khẩu
+                    <input name="matKhau" type="password" value={formData.matKhau} onChange={handleFormChange} />
+                  </label>
+                </>
+              ) : null}
               <label>
                 Số điện thoại
-                <input required name="phone" value={formData.phone} onChange={handleFormChange} />
+                <input name="soDienThoai" value={formData.soDienThoai} onChange={handleFormChange} />
+              </label>
+              <label>
+                Ngày sinh
+                <input name="ngaySinh" type="date" value={formData.ngaySinh} onChange={handleFormChange} />
               </label>
               <label>
                 Vai trò
-                <select name="role" value={formData.role} onChange={handleFormChange}>
-                  {Object.entries(roleLabels).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
+                <select name="vaiTro" value={formData.vaiTro} onChange={handleFormChange}>
+                  {roleOptions.slice(1).map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
                     </option>
                   ))}
                 </select>
               </label>
               <label>
                 Trạng thái
-                <select name="status" value={formData.status} onChange={handleFormChange}>
-                  {Object.entries(statusLabels).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
+                <select name="trangThai" value={formData.trangThai} onChange={handleFormChange}>
+                  {statusOptions.slice(1).map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
                     </option>
                   ))}
                 </select>
               </label>
-              {modalMode === 'add' ? (
-                <label>
-                  Mật khẩu tạm thời
-                  <input
-                    name="tempPassword"
-                    value={formData.tempPassword}
-                    onChange={handleFormChange}
-                    placeholder="Ví dụ: DacSan@123"
-                  />
-                </label>
-              ) : null}
+              <label>
+                Phân loại khách hàng
+                <input name="phanLoaiKhachHang" value={formData.phanLoaiKhachHang} onChange={handleFormChange} />
+              </label>
+              <label>
+                Chức vụ
+                <input name="chucVu" value={formData.chucVu} onChange={handleFormChange} />
+              </label>
             </div>
 
             <div className="account-modal-actions">
-              <button type="button" onClick={closeFormModal}>
+              <button type="button" disabled={isSaving} onClick={closeFormModal}>
                 Hủy
               </button>
-              <button className="button" type="submit">
-                Lưu
+              <button className="button" type="submit" disabled={isSaving}>
+                {isSaving ? 'Đang lưu...' : 'Lưu'}
               </button>
             </div>
           </form>
@@ -354,44 +552,52 @@ function AccountManagementPage() {
           <section className="account-modal account-detail-modal">
             <div className="account-modal-heading">
               <span>Chi tiết tài khoản</span>
-              <h2>{detailUser.name}</h2>
+              <h2>{detailUser.fullName}</h2>
             </div>
             <div className="account-detail-grid">
               <div>
+                <span>Mã tài khoản</span>
+                <strong>{getUserKey(detailUser)}</strong>
+              </div>
+              <div>
                 <span>Họ tên</span>
-                <strong>{detailUser.name}</strong>
+                <strong>{detailUser.fullName || '-'}</strong>
               </div>
               <div>
                 <span>Email</span>
-                <strong>{detailUser.email}</strong>
+                <strong>{detailUser.email || '-'}</strong>
               </div>
               <div>
                 <span>Số điện thoại</span>
-                <strong>{detailUser.phone}</strong>
+                <strong>{detailUser.phone || '-'}</strong>
+              </div>
+              <div>
+                <span>Ngày sinh</span>
+                <strong>{detailUser.birthday || '-'}</strong>
               </div>
               <div>
                 <span>Vai trò</span>
-                <strong>{roleLabels[detailUser.role]}</strong>
+                <strong>{roleLabels[normalizeUserRole(detailUser.role)] || detailUser.role}</strong>
               </div>
               <div>
                 <span>Trạng thái</span>
-                <strong>{statusLabels[detailUser.status]}</strong>
+                <strong>{statusLabels[normalizeUserStatus(detailUser.status)] || detailUser.status}</strong>
               </div>
               <div>
-                <span>Ngày tạo</span>
-                <strong>{detailUser.createdAt}</strong>
+                <span>Điểm tích lũy</span>
+                <strong>{Number(detailUser.points || 0).toLocaleString('vi-VN')}</strong>
               </div>
               <div>
-                <span>Lần đăng nhập gần nhất</span>
-                <strong>{detailUser.lastLogin}</strong>
+                <span>Phân loại khách hàng</span>
+                <strong>{detailUser.customerRank || '-'}</strong>
               </div>
               <div>
-                <span>Số đơn hàng</span>
-                <strong>{detailUser.role === 'customer' ? detailUser.orderCount : 'Không áp dụng'}</strong>
+                <span>Chức vụ</span>
+                <strong>{detailUser.position || '-'}</strong>
               </div>
-              <div className="account-detail-full">
-                <span>Ghi chú tài khoản</span>
-                <strong>{detailUser.note || 'Không có ghi chú'}</strong>
+              <div>
+                <span>Ngày đăng ký</span>
+                <strong>{detailUser.createdAt || '-'}</strong>
               </div>
             </div>
             <div className="account-modal-actions">
@@ -408,24 +614,40 @@ function AccountManagementPage() {
           <form className="account-modal account-role-modal" onSubmit={saveRole}>
             <div className="account-modal-heading">
               <span>Đổi vai trò</span>
-              <h2>{roleUser.name}</h2>
+              <h2>{roleUser.fullName}</h2>
             </div>
             <label>
               Vai trò mới
-              <select value={selectedRole} onChange={(event) => setSelectedRole(event.target.value)}>
-                {Object.entries(roleLabels).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
+              <select
+                value={roleForm.vaiTro}
+                onChange={(event) =>
+                  setRoleForm((current) => ({ ...current, vaiTro: event.target.value }))
+                }
+              >
+                {roleOptions.slice(1).map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
                   </option>
                 ))}
               </select>
             </label>
+            {roleForm.vaiTro !== 'khachhang' ? (
+              <label>
+                Chức vụ
+                <input
+                  value={roleForm.chucVu}
+                  onChange={(event) =>
+                    setRoleForm((current) => ({ ...current, chucVu: event.target.value }))
+                  }
+                />
+              </label>
+            ) : null}
             <div className="account-modal-actions">
-              <button type="button" onClick={() => setRoleUser(null)}>
+              <button type="button" disabled={isSaving} onClick={() => setRoleUser(null)}>
                 Hủy
               </button>
-              <button className="button" type="submit">
-                Lưu vai trò
+              <button className="button" type="submit" disabled={isSaving}>
+                {isSaving ? 'Đang lưu...' : 'Lưu vai trò'}
               </button>
             </div>
           </form>

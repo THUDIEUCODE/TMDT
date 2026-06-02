@@ -1,4 +1,6 @@
-import { getApi } from './apiClient'
+import { deleteApi, getApi, postApi, putApi } from './apiClient'
+
+const getPayload = (payload) => payload?.data ?? payload
 
 const getArrayPayload = (payload) => {
   if (Array.isArray(payload)) {
@@ -7,6 +9,10 @@ const getArrayPayload = (payload) => {
 
   if (Array.isArray(payload?.data)) {
     return payload.data
+  }
+
+  if (Array.isArray(payload?.data?.content)) {
+    return payload.data.content
   }
 
   if (Array.isArray(payload?.content)) {
@@ -25,24 +31,41 @@ const createInitials = (value) =>
     .join('')
     .toUpperCase()
 
+const normalizeStatus = (status) => {
+  if (status === true || status === false) {
+    return status
+  }
+
+  if (status === 'active' || status === 'dangHienThi' || status === 1 || status === 'true') {
+    return true
+  }
+
+  if (status === 'hidden' || status === 'tamAn' || status === 0 || status === 'false') {
+    return false
+  }
+
+  return true
+}
+
 export const mapCategoryFromApi = (apiCategory = {}) => {
-  const id = apiCategory.maDanhMuc ?? apiCategory.id
-  const parentId = apiCategory.maDanhMucCha ?? apiCategory.parentId ?? null
-  const name = apiCategory.tenDanhMuc ?? apiCategory.name ?? 'Danh mục'
+  const category = getPayload(apiCategory) || {}
+  const id = category.maDanhMuc ?? category.id
+  const parentId = category.maDanhMucCha ?? category.parentId ?? null
+  const name = category.tenDanhMuc ?? category.name ?? 'Danh mục'
 
   return {
-    ...apiCategory,
+    ...category,
     id: String(id ?? name),
-    parentId: parentId === null || parentId === undefined ? null : String(parentId),
+    parentId: parentId === null || parentId === undefined || parentId === '' ? null : String(parentId),
     name,
-    slug: String(apiCategory.slug ?? id ?? name),
-    description: apiCategory.moTa ?? apiCategory.description ?? '',
-    displayOrder: apiCategory.thuTuHienThi ?? apiCategory.displayOrder ?? 0,
-    status: apiCategory.trangThai ?? apiCategory.status ?? 'active',
-    image: apiCategory.image ?? createInitials(name),
-    productCount: Number(apiCategory.soSanPham ?? apiCategory.productCount ?? 0),
-    childCount: Number(apiCategory.soDanhMucCon ?? apiCategory.childCount ?? 0),
-    subCategories: apiCategory.subCategories ?? [],
+    slug: String(category.slug ?? id ?? name),
+    description: category.moTa ?? category.description ?? '',
+    displayOrder: Number(category.thuTuHienThi ?? category.displayOrder ?? 0),
+    status: normalizeStatus(category.trangThai ?? category.status),
+    image: category.image ?? createInitials(name),
+    productCount: Number(category.soSanPham ?? category.productCount ?? 0),
+    childCount: Number(category.soDanhMucCon ?? category.childCount ?? 0),
+    subCategories: category.subCategories ?? [],
   }
 }
 
@@ -56,13 +79,29 @@ export const getRootCategories = async () => {
   return getArrayPayload(payload).map(mapCategoryFromApi)
 }
 
-export const getChildCategories = async (categoryId) => {
-  const payload = await getApi(`/categories/${categoryId}/children`)
+export const getCategoryById = async (id) => {
+  const payload = await getApi(`/categories/${id}`)
+  return mapCategoryFromApi(payload)
+}
+
+export const getChildCategories = async (id) => {
+  const payload = await getApi(`/categories/${id}/children`)
   return getArrayPayload(payload).map(mapCategoryFromApi)
 }
 
-export const getCategoryById = async (id) => {
-  const payload = await getApi(`/categories/${id}`)
-  return mapCategoryFromApi(payload?.data ?? payload)
+export const createCategory = async (data) => {
+  const payload = await postApi('/categories', data)
+  return mapCategoryFromApi(payload)
 }
 
+export const updateCategory = async (id, data) => {
+  const payload = await putApi(`/categories/${id}`, data)
+  return mapCategoryFromApi(payload)
+}
+
+export const toggleCategory = async (id) => {
+  const payload = await putApi(`/categories/${id}/toggle`)
+  return mapCategoryFromApi(payload)
+}
+
+export const deleteCategory = async (id) => deleteApi(`/categories/${id}`)

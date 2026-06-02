@@ -3,9 +3,13 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { mockOrders } from '../../data/mockOrders'
 import {
   cancelOrder,
+  confirmReceived,
+  confirmWalletPayment,
   getOrderById,
   normalizeOrderStatus,
   orderStatusLabels,
+  paymentMethodLabels,
+  paymentStatusLabels,
 } from '../../services/orderService'
 import { createReturnRequest } from '../../services/returnService'
 import { createReview } from '../../services/reviewService'
@@ -27,6 +31,9 @@ const normalizeMockOrder = (order) => ({
   ...order,
   status: normalizeOrderStatus(order.status),
   paymentStatus: order.paymentStatus || '',
+  paymentMethod: order.paymentMethod || 'COD',
+  transactionCode: order.transactionCode || '',
+  paidAt: order.paidAt || '',
   district: order.district || '',
   province: order.province || '',
   returnStatus: order.returnStatus || 'khongCo',
@@ -91,6 +98,56 @@ function OrderDetailPage() {
   const canCancel = order?.status === 'choXacNhan'
   const canReturn = order?.status === 'daGiao' && (order?.returnStatus === 'khongCo' || !order?.returnStatus)
   const canReview = order?.status === 'daGiao'
+  const canConfirmReceived = order?.status === 'dangGiao'
+  const canConfirmWallet = order?.paymentMethod === 'vi' && order?.paymentStatus === 'choThanhToan'
+  const shouldShowBankTransferGuide = order?.paymentMethod === 'chuyenKhoan' && order?.paymentStatus === 'choThanhToan'
+
+  const submitConfirmReceived = async () => {
+    if (!window.confirm('Xác nhận bạn đã nhận được hàng?')) {
+      return
+    }
+
+    setActionError('')
+    setActionMessage('')
+
+    try {
+      const maNguoiDung = getCurrentUserId()
+
+      if (!maNguoiDung) {
+        navigate(`/login?redirect=${encodeURIComponent(`/orders/${id}`)}`)
+        return
+      }
+
+      await confirmReceived(id, { maNguoiDung })
+      setActionMessage('Đã xác nhận nhận hàng.')
+      await loadOrder({ silent: true })
+    } catch (error) {
+      setActionError(error?.message || 'Không thể xác nhận nhận hàng.')
+    }
+  }
+
+  const submitConfirmWalletPayment = async () => {
+    setActionError('')
+    setActionMessage('')
+
+    try {
+      const maNguoiDung = getCurrentUserId()
+
+      if (!maNguoiDung) {
+        navigate(`/login?redirect=${encodeURIComponent(`/orders/${id}`)}`)
+        return
+      }
+
+      await confirmWalletPayment(id, {
+        maNguoiDung,
+        maGiaoDich: `VI-DEMO-DH${id}`,
+      })
+      setActionMessage('Đã xác nhận thanh toán ví.')
+      await loadOrder({ silent: true })
+    } catch (error) {
+      setActionError(error?.message || 'Không thể xác nhận thanh toán ví.')
+    }
+  }
 
   const submitCancelOrder = async (event) => {
     event.preventDefault()
@@ -303,12 +360,24 @@ function OrderDetailPage() {
                 </p>
                 <p>
                   <span>Phương thức thanh toán</span>
-                  <strong>{order.paymentMethod}</strong>
+                  <strong>{paymentMethodLabels[order.paymentMethod] || order.paymentMethod}</strong>
                 </p>
                 <p>
                   <span>Trạng thái thanh toán</span>
-                  <strong>{order.paymentStatus || 'Đang cập nhật'}</strong>
+                  <strong>{paymentStatusLabels[order.paymentStatus] || order.paymentStatus || 'Đang cập nhật'}</strong>
                 </p>
+                {order.transactionCode ? (
+                  <p>
+                    <span>Mã giao dịch</span>
+                    <strong>{order.transactionCode}</strong>
+                  </p>
+                ) : null}
+                {order.paidAt ? (
+                  <p>
+                    <span>Ngày thanh toán</span>
+                    <strong>{formatDate(order.paidAt)}</strong>
+                  </p>
+                ) : null}
                 <p>
                   <span>Ghi chú giao hàng</span>
                   <strong>{order.note || 'Không có'}</strong>
@@ -352,6 +421,18 @@ function OrderDetailPage() {
               </div>
             </article>
           </section>
+
+          {shouldShowBankTransferGuide ? (
+            <section className="order-detail-card payment-note">
+              <h2>Hướng dẫn chuyển khoản</h2>
+              <p>Ngân hàng: Demo Bank</p>
+              <p>Chủ tài khoản: DAC SAN MIEN TRUNG</p>
+              <p>Số tài khoản: 0123456789</p>
+              <p>Số tiền: {formatCurrency(order.total)}</p>
+              <p>Nội dung chuyển khoản: DH{order.code || order.id} - {order.receiverPhone}</p>
+              <p>Sau khi bạn chuyển khoản, nhân viên sẽ kiểm tra và xác nhận thanh toán trên hệ thống.</p>
+            </section>
+          ) : null}
 
           <section className="order-detail-card">
             <h2>Sản phẩm trong đơn</h2>
@@ -408,6 +489,16 @@ function OrderDetailPage() {
               {canCancel ? (
                 <button className="button" type="button" onClick={() => setCancelModalOpen(true)}>
                   Hủy đơn
+                </button>
+              ) : null}
+              {canConfirmReceived ? (
+                <button className="button" type="button" onClick={submitConfirmReceived}>
+                  Đã nhận được hàng
+                </button>
+              ) : null}
+              {canConfirmWallet ? (
+                <button className="button" type="button" onClick={submitConfirmWalletPayment}>
+                  Xác nhận thanh toán ví demo
                 </button>
               ) : null}
               {canReturn ? (

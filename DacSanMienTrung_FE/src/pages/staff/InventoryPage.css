@@ -50,8 +50,8 @@
 
 .inventory-stat-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .inventory-stat-grid article {
@@ -73,7 +73,7 @@
 
 .inventory-filter-panel {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) 220px 220px;
+  grid-template-columns: minmax(260px, 1fr) 190px 180px 190px 180px;
   gap: 14px;
   padding: 18px;
 }
@@ -154,10 +154,10 @@
 .inventory-table-head,
 .inventory-table-row {
   display: grid;
-  grid-template-columns: 64px minmax(190px, 1.2fr) 140px 170px 150px 110px 130px 120px 190px;
+  grid-template-columns: 64px minmax(190px, 1.2fr) 150px 120px 170px 110px 90px 120px 120px 120px minmax(240px, 1fr);
   gap: 12px;
   align-items: center;
-  min-width: 1260px;
+  min-width: 1500px;
 }
 
 .inventory-table-head {
@@ -186,6 +186,13 @@
   font-weight: 900;
 }
 
+.inventory-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
 .inventory-table-row strong {
   color: var(--color-purple);
 }
@@ -203,24 +210,61 @@
   font-weight: 900;
 }
 
-.inventory-status-inStock {
+.inventory-status-conHang,
+.variant-status-active {
   color: #166534;
   background: #dcfce7;
 }
 
-.inventory-status-low {
-  color: #075985;
-  background: #dff3ff;
-}
-
-.inventory-status-restock {
+.inventory-status-canNhapThem {
   color: #8a4d00;
   background: #fff2c6;
 }
 
-.inventory-status-out {
+.inventory-status-ratThap {
+  color: #9a3412;
+  background: #ffedd5;
+}
+
+.inventory-status-hetHang,
+.variant-status-hidden {
   color: #991b1b;
   background: #fee2e2;
+}
+
+.variant-status {
+  width: fit-content;
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.inventory-message,
+.inventory-success,
+.inventory-error {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+.inventory-message {
+  color: var(--color-muted);
+  background: #fffaf0;
+  border: 1px solid var(--color-border);
+}
+
+.inventory-success {
+  color: var(--color-green);
+  background: #effaf2;
+  border: 1px solid rgba(47, 143, 79, 0.22);
+}
+
+.inventory-error {
+  color: var(--color-red);
+  background: #fff5f5;
+  border: 1px solid #fecaca;
 }
 
 .inventory-actions {
@@ -259,10 +303,16 @@
 
 .inventory-modal {
   width: min(100%, 620px);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
   display: grid;
   gap: 18px;
   padding: 24px;
   box-shadow: var(--shadow-md);
+}
+
+.inventory-detail-modal {
+  width: min(100%, 900px);
 }
 
 .inventory-modal-heading {
@@ -292,6 +342,30 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+}
+
+.inventory-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.inventory-detail-grid div {
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  background: #fffaf0;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+}
+
+.inventory-detail-grid span {
+  color: var(--color-muted);
+}
+
+.inventory-detail-grid strong {
+  color: var(--color-purple);
+  line-height: 1.55;
 }
 
 .inventory-form-full {
@@ -352,6 +426,7 @@
   .inventory-table-row > span,
   .inventory-table-row > b,
   .inventory-table-row > .inventory-status,
+  .inventory-table-row > .variant-status,
   .inventory-table-row > .inventory-actions {
     grid-column: 1 / -1;
   }

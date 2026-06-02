@@ -8,6 +8,8 @@ import java.util.Optional;
 
 public interface BienTheRepository extends JpaRepository<BienThe, Integer> {
 
+    List<BienThe> findBySanPham_MaSanPham(Integer maSanPham);
+
     List<BienThe> findBySanPham_MaSanPhamAndTrangThaiTrue(Integer maSanPham);
 
     Optional<BienThe> findByMaBienTheAndTrangThaiTrue(Integer maBienThe);

@@ -6,10 +6,14 @@ import { mockCurrentUser } from '../../data/mockUsers'
 import { getUserById } from '../../services/authService'
 import {
   cancelOrder as cancelOrderApi,
+  confirmReceived,
+  confirmWalletPayment,
   getOrdersByUser,
   orderStatusLabels,
   orderStatusOptions,
   normalizeOrderStatus,
+  paymentMethodLabels,
+  paymentStatusLabels,
 } from '../../services/orderService'
 import { getCurrentUser, getCurrentUserId, logout, normalizeUser } from '../../utils/authStorage'
 import './ProfilePage.css'
@@ -36,6 +40,8 @@ const normalizeMockUser = (user) => ({
 const normalizeMockOrder = (order) => ({
   ...order,
   status: normalizeOrderStatus(order.status),
+  paymentStatus: order.paymentStatus || '',
+  paymentMethod: order.paymentMethod || 'COD',
   total: order.total ?? order.items.reduce((sum, item) => sum + item.price * item.quantity, 0) + order.shippingFee - order.discount,
 })
 const fallbackOrders = mockOrders.map(normalizeMockOrder)
@@ -152,6 +158,47 @@ function ProfilePage() {
     }
   }
 
+  const handleConfirmReceived = async (order) => {
+    if (!window.confirm('Xác nhận bạn đã nhận được hàng?')) {
+      return
+    }
+
+    try {
+      const maNguoiDung = getCurrentUserId()
+
+      if (!maNguoiDung) {
+        navigate('/login?redirect=/profile')
+        return
+      }
+
+      setOrdersError('')
+      await confirmReceived(order.id, { maNguoiDung })
+      await loadOrders()
+    } catch (error) {
+      setOrdersError(error?.message || 'Không thể xác nhận nhận hàng.')
+    }
+  }
+
+  const handleConfirmWalletPayment = async (order) => {
+    try {
+      const maNguoiDung = getCurrentUserId()
+
+      if (!maNguoiDung) {
+        navigate('/login?redirect=/profile')
+        return
+      }
+
+      setOrdersError('')
+      await confirmWalletPayment(order.id, {
+        maNguoiDung,
+        maGiaoDich: `VI-DEMO-DH${order.id}`,
+      })
+      await loadOrders()
+    } catch (error) {
+      setOrdersError(error?.message || 'Không thể xác nhận thanh toán ví.')
+    }
+  }
+
   const handleLogout = () => {
     logout()
     navigate('/login')
@@ -262,9 +309,16 @@ function ProfilePage() {
                 <div className="profile-order-meta">
                   <span>Ngày đặt: {order.orderDate}</span>
                   <span>Tổng tiền: {formatCurrency(order.total)}</span>
-                  <span>Thanh toán: {order.paymentMethod}</span>
+                  <span>Thanh toán: {paymentMethodLabels[order.paymentMethod] || order.paymentMethod}</span>
+                  <span>TT thanh toán: {paymentStatusLabels[order.paymentStatus] || order.paymentStatus || 'Đang cập nhật'}</span>
                   <span>{order.items.length} sản phẩm</span>
                 </div>
+                {order.paymentMethod === 'chuyenKhoan' && order.paymentStatus === 'choThanhToan' ? (
+                  <p className="product-result-summary">Chờ nhân viên xác nhận chuyển khoản</p>
+                ) : null}
+                {order.status === 'khachDaNhan' ? (
+                  <p className="product-result-summary">Chờ nhân viên hoàn tất đơn</p>
+                ) : null}
               </div>
 
               <div className="profile-order-actions">
@@ -279,6 +333,16 @@ function ProfilePage() {
                 {order.status === 'daGiao' ? (
                   <button type="button" onClick={() => navigate(`/orders/${order.id}`)}>
                     Yêu cầu hoàn hàng
+                  </button>
+                ) : null}
+                {order.status === 'dangGiao' ? (
+                  <button type="button" onClick={() => handleConfirmReceived(order)}>
+                    Đã nhận hàng
+                  </button>
+                ) : null}
+                {order.paymentMethod === 'vi' && order.paymentStatus === 'choThanhToan' ? (
+                  <button type="button" onClick={() => handleConfirmWalletPayment(order)}>
+                    Xác nhận thanh toán ví
                   </button>
                 ) : null}
               </div>

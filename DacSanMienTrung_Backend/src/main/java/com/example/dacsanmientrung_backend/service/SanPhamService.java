@@ -1,5 +1,6 @@
 package com.example.dacsanmientrung_backend.service;
 
+import com.example.dacsanmientrung_backend.dto.request.SanPhamRequest;
 import com.example.dacsanmientrung_backend.dto.response.SanPhamDetailResponse;
 import com.example.dacsanmientrung_backend.dto.response.SanPhamResponse;
 
@@ -15,4 +16,12 @@ public interface SanPhamService {
     List<SanPhamResponse> getProductsByCategory(Integer categoryId);
 
     List<SanPhamResponse> getProductsByCategoryTree(Integer categoryId);
+
+    SanPhamDetailResponse createProduct(SanPhamRequest request);
+
+    SanPhamDetailResponse updateProduct(Integer id, SanPhamRequest request);
+
+    SanPhamDetailResponse toggleProduct(Integer id);
+
+    void softDeleteProduct(Integer id);
 }

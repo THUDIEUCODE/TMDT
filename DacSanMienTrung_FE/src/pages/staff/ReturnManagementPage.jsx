@@ -1,32 +1,105 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { mockReturns } from '../../data/mockReturns'
 import {
-  getReturnTotal,
-  mockReturns,
-  returnReasonLabels,
+  approveReturn,
+  getReturnByOrderId,
+  getReturns,
+  mapReturnFromApi,
+  refundReturn,
+  rejectReturn,
   returnStatusLabels,
-} from '../../data/mockReturns'
+  returnStatusOptions,
+} from '../../services/returnService'
+import { getCurrentUser } from '../../utils/authStorage'
 import './ReturnManagementPage.css'
 
-const formatCurrency = (value) => `${value.toLocaleString('vi-VN')}đ`
+const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`
+const formatDate = (value) => {
+  if (!value) {
+    return 'Đang cập nhật'
+  }
+
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('vi-VN')
+}
+
+const fallbackReturns = mockReturns.map(mapReturnFromApi)
+
+const actionConfig = {
+  approve: {
+    title: 'Duyệt hoàn hàng',
+    label: 'Duyệt',
+    success: 'Đã duyệt yêu cầu hoàn hàng.',
+    placeholder: 'Yêu cầu hợp lệ, đã kiểm tra minh chứng',
+    validateNote: false,
+  },
+  reject: {
+    title: 'Từ chối hoàn hàng',
+    label: 'Xác nhận từ chối',
+    success: 'Đã từ chối yêu cầu hoàn hàng.',
+    placeholder: 'Nhập lý do từ chối yêu cầu hoàn hàng',
+    validateNote: true,
+  },
+  refund: {
+    title: 'Xác nhận hoàn tiền',
+    label: 'Xác nhận hoàn tiền',
+    success: 'Đã xác nhận hoàn tiền cho khách hàng.',
+    placeholder: 'Đã hoàn tiền theo giao dịch ngân hàng/ví',
+    validateNote: false,
+  },
+}
 
 function ReturnManagementPage() {
-  const [returns, setReturns] = useState(mockReturns)
+  const [returns, setReturns] = useState(fallbackReturns)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
-  const [reasonFilter, setReasonFilter] = useState('all')
   const [detailReturn, setDetailReturn] = useState(null)
-  const [rejectReturn, setRejectReturn] = useState(null)
-  const [rejectReason, setRejectReason] = useState('')
-  const [rejectError, setRejectError] = useState('')
+  const [actionTarget, setActionTarget] = useState(null)
+  const [actionNote, setActionNote] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
+  const [isDetailLoading, setIsDetailLoading] = useState(false)
+  const [pendingActionId, setPendingActionId] = useState('')
+  const [hasApiError, setHasApiError] = useState(false)
+  const [actionMessage, setActionMessage] = useState('')
+  const [actionError, setActionError] = useState('')
+
+  const loadReturns = useCallback(async ({ silent = false, status = statusFilter } = {}) => {
+    if (!silent) {
+      setIsLoading(true)
+    }
+
+    try {
+      const apiReturns = await getReturns({
+        status: status === 'all' ? undefined : status,
+      })
+      setReturns(apiReturns)
+      setHasApiError(false)
+    } catch {
+      setReturns(fallbackReturns)
+      setHasApiError(true)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [statusFilter])
+
+  useEffect(() => {
+    const loadTimer = window.setTimeout(() => {
+      loadReturns()
+    }, 0)
+
+    return () => {
+      window.clearTimeout(loadTimer)
+    }
+  }, [loadReturns])
 
   const stats = useMemo(() => {
     return returns.reduce(
       (result, item) => {
         result.total += 1
-        result[item.status] += 1
+        result[item.returnStatus] = (result[item.returnStatus] || 0) + 1
         return result
       },
-      { total: 0, pending: 0, approved: 0, refunded: 0, rejected: 0 },
+      { total: 0, choDuyet: 0, daDuyet: 0, tuChoi: 0, daHoanTien: 0 },
     )
   }, [returns])
 
@@ -36,84 +109,127 @@ function ReturnManagementPage() {
     return returns.filter((item) => {
       const matchesSearch =
         !normalizedSearch ||
-        item.id.toLowerCase().includes(normalizedSearch) ||
-        item.orderId.toLowerCase().includes(normalizedSearch)
-      const matchesStatus = statusFilter === 'all' || item.status === statusFilter
-      const matchesReason = reasonFilter === 'all' || item.reason === reasonFilter
+        item.orderId.toLowerCase().includes(normalizedSearch) ||
+        item.customerName.toLowerCase().includes(normalizedSearch) ||
+        item.phone.toLowerCase().includes(normalizedSearch)
+      const matchesStatus = statusFilter === 'all' || item.returnStatus === statusFilter
 
-      return matchesSearch && matchesStatus && matchesReason
+      return matchesSearch && matchesStatus
     })
-  }, [reasonFilter, returns, searchTerm, statusFilter])
+  }, [returns, searchTerm, statusFilter])
 
-  const approveReturn = (returnId) => {
-    const confirmed = window.confirm('Duyệt yêu cầu hoàn hàng này?')
-    if (!confirmed) {
-      return
+  const changeStatusFilter = (status) => {
+    setStatusFilter(status)
+
+    if (!hasApiError) {
+      loadReturns({ status })
     }
-
-    setReturns((currentReturns) =>
-      currentReturns.map((item) =>
-        item.id === returnId
-          ? { ...item, status: 'approved', handlingNote: 'Nhân viên đã duyệt yêu cầu hoàn hàng.' }
-          : item,
-      ),
-    )
   }
 
-  const refundReturn = (returnId) => {
-    setReturns((currentReturns) =>
-      currentReturns.map((item) =>
-        item.id === returnId
-          ? { ...item, status: 'refunded', handlingNote: 'Đã xác nhận hoàn tiền cho khách hàng.' }
-          : item,
-      ),
-    )
+  const openDetailModal = async (item) => {
+    setActionError('')
+    setActionMessage('')
+    setDetailReturn(item)
+    setIsDetailLoading(true)
+
+    try {
+      const apiReturn = await getReturnByOrderId(item.orderId)
+      setDetailReturn(apiReturn)
+    } catch (error) {
+      setDetailReturn(item)
+      setActionError(error?.message || 'Không thể tải chi tiết yêu cầu hoàn hàng.')
+    } finally {
+      setIsDetailLoading(false)
+    }
   }
 
-  const openRejectModal = (item) => {
-    setRejectReturn(item)
-    setRejectReason('')
-    setRejectError('')
+  const openActionModal = (type, item) => {
+    setDetailReturn(null)
+    setActionTarget({ type, item })
+    setActionNote('')
+    setActionError('')
+    setActionMessage('')
   }
 
-  const submitRejectReturn = (event) => {
+  const closeActionModal = () => {
+    setActionTarget(null)
+    setActionNote('')
+  }
+
+  const getStaffId = () => {
+    const currentUser = getCurrentUser()
+    return currentUser?.maNguoiDung || currentUser?.id || 3
+  }
+
+  const submitReturnAction = async (event) => {
     event.preventDefault()
 
-    if (!rejectReason.trim()) {
-      setRejectError('Vui lòng nhập lý do từ chối.')
+    if (!actionTarget) {
       return
     }
 
-    setReturns((currentReturns) =>
-      currentReturns.map((item) =>
-        item.id === rejectReturn.id
-          ? { ...item, status: 'rejected', handlingNote: rejectReason.trim() }
-          : item,
-      ),
-    )
-    setRejectReturn(null)
-    setRejectReason('')
-    setRejectError('')
+    const config = actionConfig[actionTarget.type]
+    const trimmedNote = actionNote.trim()
+
+    setActionError('')
+    setActionMessage('')
+
+    if (config.validateNote && !trimmedNote) {
+      setActionError('Vui lòng nhập ghi chú xử lý.')
+      return
+    }
+
+    const payload = {
+      maNhanVienXuLy: getStaffId(),
+      ghiChuXuLy: trimmedNote,
+    }
+    const handlers = {
+      approve: approveReturn,
+      reject: rejectReturn,
+      refund: refundReturn,
+    }
+
+    try {
+      setPendingActionId(actionTarget.item.orderId)
+      const updatedReturn = await handlers[actionTarget.type](actionTarget.item.orderId, payload)
+      closeActionModal()
+      setActionMessage(config.success)
+
+      if (detailReturn && String(detailReturn.orderId) === String(updatedReturn.orderId)) {
+        setDetailReturn(updatedReturn)
+      }
+
+      await loadReturns({ silent: true })
+    } catch (error) {
+      setActionError(error?.message || 'Không thể xử lý yêu cầu hoàn hàng.')
+    } finally {
+      setPendingActionId('')
+    }
   }
 
   const renderActions = (item) => (
     <div className="return-actions">
-      <button type="button" onClick={() => setDetailReturn(item)}>
+      <button type="button" onClick={() => openDetailModal(item)}>
         Xem chi tiết
       </button>
-      {item.status === 'pending' ? (
+      {item.returnStatus === 'choDuyet' ? (
         <>
-          <button type="button" onClick={() => approveReturn(item.id)}>
+          <button type="button" disabled={pendingActionId === item.orderId} onClick={() => openActionModal('approve', item)}>
             Duyệt
           </button>
-          <button className="danger" type="button" onClick={() => openRejectModal(item)}>
+          <button
+            className="danger"
+            type="button"
+            disabled={pendingActionId === item.orderId}
+            onClick={() => openActionModal('reject', item)}
+          >
             Từ chối
           </button>
         </>
       ) : null}
-      {item.status === 'approved' ? (
-        <button type="button" onClick={() => refundReturn(item.id)}>
-          Xác nhận đã hoàn tiền
+      {item.returnStatus === 'daDuyet' ? (
+        <button type="button" disabled={pendingActionId === item.orderId} onClick={() => openActionModal('refund', item)}>
+          Xác nhận hoàn tiền
         </button>
       ) : null}
     </div>
@@ -136,21 +252,28 @@ function ReturnManagementPage() {
         </article>
         <article>
           <span>Chờ duyệt</span>
-          <strong>{stats.pending}</strong>
+          <strong>{stats.choDuyet}</strong>
         </article>
         <article>
           <span>Đã duyệt</span>
-          <strong>{stats.approved}</strong>
-        </article>
-        <article>
-          <span>Đã hoàn tiền</span>
-          <strong>{stats.refunded}</strong>
+          <strong>{stats.daDuyet}</strong>
         </article>
         <article>
           <span>Từ chối</span>
-          <strong>{stats.rejected}</strong>
+          <strong>{stats.tuChoi}</strong>
+        </article>
+        <article>
+          <span>Đã hoàn tiền</span>
+          <strong>{stats.daHoanTien}</strong>
         </article>
       </section>
+
+      {isLoading ? <p className="return-message">Đang tải yêu cầu hoàn hàng...</p> : null}
+      {hasApiError ? (
+        <p className="return-message">Không kết nối được backend, đang dùng dữ liệu mẫu.</p>
+      ) : null}
+      {actionMessage ? <p className="return-success">{actionMessage}</p> : null}
+      {actionError ? <p className="return-form-error">{actionError}</p> : null}
 
       <section className="return-filter-panel">
         <label>
@@ -158,27 +281,15 @@ function ReturnManagementPage() {
           <input
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
-            placeholder="Nhập mã yêu cầu hoặc mã đơn hàng"
+            placeholder="Mã đơn, tên khách hàng hoặc số điện thoại"
           />
         </label>
         <label>
           Trạng thái
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-            <option value="all">Tất cả</option>
-            {Object.entries(returnStatusLabels).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Lý do hoàn hàng
-          <select value={reasonFilter} onChange={(event) => setReasonFilter(event.target.value)}>
-            <option value="all">Tất cả</option>
-            {Object.entries(returnReasonLabels).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
+          <select value={statusFilter} onChange={(event) => changeStatusFilter(event.target.value)}>
+            {returnStatusOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
             ))}
           </select>
@@ -188,65 +299,72 @@ function ReturnManagementPage() {
       <section className="return-table-card">
         <div className="return-table-summary">
           <strong>{filteredReturns.length} yêu cầu</strong>
-          <span>Dữ liệu mock, thao tác cập nhật bằng state nội bộ.</span>
+          <span>Dữ liệu được tải từ backend khi kết nối thành công.</span>
         </div>
 
         <div className="return-table">
           <div className="return-table-head">
-            <span>Mã yêu cầu</span>
             <span>Mã đơn hàng</span>
             <span>Khách hàng</span>
-            <span>Ngày gửi</span>
-            <span>Lý do</span>
+            <span>Số điện thoại</span>
+            <span>Ngày đặt</span>
+            <span>Lý do hoàn hàng</span>
             <span>Tiền hoàn dự kiến</span>
             <span>Trạng thái</span>
             <span>Thao tác</span>
           </div>
 
           {filteredReturns.map((item) => (
-            <article className="return-table-row" key={item.id}>
-              <strong>{item.id}</strong>
-              <span>{item.orderId}</span>
-              <span>{item.customerName}</span>
-              <span>{item.requestDate}</span>
-              <span>{returnReasonLabels[item.reason]}</span>
-              <b>{formatCurrency(getReturnTotal(item))}</b>
-              <span className={`return-status return-status-${item.status}`}>
-                {returnStatusLabels[item.status]}
+            <article className="return-table-row" key={item.orderId}>
+              <strong>{item.orderId}</strong>
+              <span>{item.customerName || 'Đang cập nhật'}</span>
+              <span>{item.phone || 'Đang cập nhật'}</span>
+              <span>{formatDate(item.orderDate)}</span>
+              <span>{item.returnReason || 'Không có'}</span>
+              <b>{formatCurrency(item.estimatedRefund)}</b>
+              <span className={`return-status return-status-${item.returnStatus}`}>
+                {returnStatusLabels[item.returnStatus] || item.returnStatus}
               </span>
               {renderActions(item)}
             </article>
           ))}
+
+          {filteredReturns.length === 0 && !isLoading ? (
+            <section className="empty-products">
+              <h2>Chưa có yêu cầu hoàn hàng phù hợp</h2>
+              <p>Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc trạng thái.</p>
+            </section>
+          ) : null}
         </div>
       </section>
 
-      {rejectReturn ? (
+      {actionTarget ? (
         <div className="return-modal-backdrop" role="presentation">
-          <form className="return-modal" onSubmit={submitRejectReturn}>
+          <form className="return-modal" onSubmit={submitReturnAction}>
             <div className="return-modal-heading">
-              <span>Từ chối hoàn hàng</span>
-              <h2>{rejectReturn.id}</h2>
-              <p>Đơn hàng {rejectReturn.orderId}</p>
+              <span>{actionConfig[actionTarget.type].title}</span>
+              <h2>{actionTarget.item.orderId}</h2>
+              <p>{actionTarget.item.customerName}</p>
             </div>
             <label>
-              Lý do từ chối
+              Ghi chú xử lý
               <textarea
                 rows="4"
-                value={rejectReason}
+                value={actionNote}
                 onChange={(event) => {
-                  setRejectReason(event.target.value)
-                  setRejectError('')
+                  setActionNote(event.target.value)
+                  setActionError('')
                 }}
-                placeholder="Nhập lý do từ chối yêu cầu hoàn hàng"
+                placeholder={actionConfig[actionTarget.type].placeholder}
               />
             </label>
-            {rejectError ? <p className="return-form-error">{rejectError}</p> : null}
+            {actionError ? <p className="return-form-error">{actionError}</p> : null}
             <div className="return-modal-actions">
-              <button type="button" onClick={() => setRejectReturn(null)}>
+              <button type="button" onClick={closeActionModal}>
                 Đóng
               </button>
-              <button className="button" type="submit">
-                Xác nhận từ chối
+              <button className="button" type="submit" disabled={pendingActionId === actionTarget.item.orderId}>
+                {actionConfig[actionTarget.type].label}
               </button>
             </div>
           </form>
@@ -258,8 +376,10 @@ function ReturnManagementPage() {
           <section className="return-modal return-detail-modal">
             <div className="return-modal-heading">
               <span>Chi tiết hoàn hàng</span>
-              <h2>{detailReturn.id}</h2>
+              <h2>{detailReturn.orderId}</h2>
             </div>
+
+            {isDetailLoading ? <p className="return-message">Đang tải chi tiết yêu cầu hoàn hàng...</p> : null}
 
             <div className="return-detail-grid">
               <div>
@@ -268,37 +388,55 @@ function ReturnManagementPage() {
               </div>
               <div>
                 <span>Khách hàng</span>
-                <strong>{detailReturn.customerName}</strong>
+                <strong>{detailReturn.customerName || 'Đang cập nhật'}</strong>
               </div>
               <div>
                 <span>Số điện thoại</span>
-                <strong>{detailReturn.phone}</strong>
+                <strong>{detailReturn.phone || 'Đang cập nhật'}</strong>
               </div>
               <div>
-                <span>Ngày yêu cầu</span>
-                <strong>{detailReturn.requestDate}</strong>
+                <span>Địa chỉ giao hàng</span>
+                <strong>{detailReturn.address || 'Đang cập nhật'}</strong>
               </div>
               <div>
-                <span>Lý do hoàn hàng</span>
-                <strong>{returnReasonLabels[detailReturn.reason]}</strong>
+                <span>Ngày đặt</span>
+                <strong>{formatDate(detailReturn.orderDate)}</strong>
               </div>
               <div>
-                <span>Trạng thái</span>
-                <strong>{returnStatusLabels[detailReturn.status]}</strong>
+                <span>Tổng thanh toán</span>
+                <strong>{formatCurrency(detailReturn.orderTotal)}</strong>
+              </div>
+              <div>
+                <span>Trạng thái đơn hàng</span>
+                <strong>{detailReturn.orderStatus || 'Đang cập nhật'}</strong>
+              </div>
+              <div>
+                <span>Trạng thái hoàn hàng</span>
+                <strong>{returnStatusLabels[detailReturn.returnStatus] || detailReturn.returnStatus}</strong>
               </div>
               <div className="return-detail-full">
-                <span>Mô tả chi tiết</span>
-                <strong>{detailReturn.description}</strong>
+                <span>Lý do hoàn hàng</span>
+                <strong>{detailReturn.returnReason || 'Không có'}</strong>
               </div>
+              {detailReturn.staffId ? (
+                <div>
+                  <span>Nhân viên xử lý</span>
+                  <strong>{detailReturn.staffId}</strong>
+                </div>
+              ) : null}
+              {detailReturn.staffNote ? (
+                <div className="return-detail-full">
+                  <span>Ghi chú xử lý</span>
+                  <strong>{detailReturn.staffNote}</strong>
+                </div>
+              ) : null}
             </div>
 
             <div className="return-evidence-list">
               <h3>Ảnh minh chứng</h3>
-              {detailReturn.evidence.length > 0 ? (
+              {detailReturn.proofImage ? (
                 <div>
-                  {detailReturn.evidence.map((evidence) => (
-                    <span key={evidence}>{evidence}</span>
-                  ))}
+                  <span>{detailReturn.proofImage}</span>
                 </div>
               ) : (
                 <p>Không có ảnh minh chứng.</p>
@@ -307,30 +445,40 @@ function ReturnManagementPage() {
 
             <div className="return-item-list">
               <h3>Sản phẩm yêu cầu hoàn</h3>
-              {detailReturn.items.map((item) => (
+              {(detailReturn.items || []).map((item) => (
                 <div className="return-item-row" key={item.id}>
+                  <span className="return-item-image">{item.image || 'SP'}</span>
                   <strong>{item.name}</strong>
                   <span>{item.variant}</span>
-                  <span>x{item.quantity}</span>
-                  <span>{formatCurrency(item.price)}</span>
-                  <b>{formatCurrency(item.price * item.quantity)}</b>
+                  <span>Mua: {item.quantity}</span>
+                  <span>Hoàn: {item.returnQuantity}</span>
+                  <span>{formatCurrency(item.refundPrice)}</span>
+                  <b>{formatCurrency(item.refundTotal)}</b>
                 </div>
               ))}
             </div>
 
             <div className="return-total-box">
-              <span>Tổng tiền hoàn</span>
-              <strong>{formatCurrency(getReturnTotal(detailReturn))}</strong>
+              <span>Tổng tiền hoàn dự kiến</span>
+              <strong>{formatCurrency(detailReturn.estimatedRefund)}</strong>
             </div>
 
-            {detailReturn.handlingNote ? (
-              <div className="return-handling-note">
-                <strong>Ghi chú xử lý</strong>
-                <p>{detailReturn.handlingNote}</p>
-              </div>
-            ) : null}
-
             <div className="return-modal-actions">
+              {detailReturn.returnStatus === 'choDuyet' ? (
+                <>
+                  <button type="button" onClick={() => openActionModal('approve', detailReturn)}>
+                    Duyệt
+                  </button>
+                  <button type="button" onClick={() => openActionModal('reject', detailReturn)}>
+                    Từ chối
+                  </button>
+                </>
+              ) : null}
+              {detailReturn.returnStatus === 'daDuyet' ? (
+                <button type="button" onClick={() => openActionModal('refund', detailReturn)}>
+                  Xác nhận hoàn tiền
+                </button>
+              ) : null}
               <button type="button" onClick={() => setDetailReturn(null)}>
                 Đóng
               </button>
