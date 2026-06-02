@@ -88,6 +88,7 @@
 
 .staff-order-filter-panel input,
 .staff-order-filter-panel select,
+.staff-order-modal input,
 .staff-order-modal textarea {
   width: 100%;
   color: var(--color-text);
@@ -98,7 +99,8 @@
 }
 
 .staff-order-filter-panel input,
-.staff-order-filter-panel select {
+.staff-order-filter-panel select,
+.staff-order-modal input {
   min-height: 42px;
   padding: 0 14px;
   border-radius: 999px;
@@ -111,6 +113,7 @@
 
 .staff-order-filter-panel input:focus,
 .staff-order-filter-panel select:focus,
+.staff-order-modal input:focus,
 .staff-order-modal textarea:focus {
   border-color: var(--color-orange);
   box-shadow: 0 0 0 3px rgba(243, 156, 18, 0.16);
@@ -217,6 +220,19 @@
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
+}
+
+.staff-order-action-note {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  color: var(--color-muted);
+  background: #fffaf0;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .staff-order-actions button,

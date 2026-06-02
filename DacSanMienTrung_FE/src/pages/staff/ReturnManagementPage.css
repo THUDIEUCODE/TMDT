@@ -73,7 +73,7 @@
 
 .return-filter-panel {
   display: grid;
-  grid-template-columns: minmax(280px, 1fr) 220px 220px;
+  grid-template-columns: minmax(280px, 1fr) 220px;
   gap: 14px;
   padding: 18px;
 }
@@ -146,10 +146,10 @@
 .return-table-head,
 .return-table-row {
   display: grid;
-  grid-template-columns: 140px 140px 150px 110px 150px 140px 120px minmax(230px, 1fr);
+  grid-template-columns: 140px 150px 120px 110px minmax(160px, 1fr) 140px 120px minmax(230px, 1fr);
   gap: 12px;
   align-items: center;
-  min-width: 1160px;
+  min-width: 1250px;
 }
 
 .return-table-head {
@@ -183,24 +183,48 @@
   font-weight: 900;
 }
 
-.return-status-pending {
+.return-status-pending,
+.return-status-choDuyet {
   color: #8a4d00;
   background: #fff2c6;
 }
 
-.return-status-approved {
+.return-status-approved,
+.return-status-daDuyet {
   color: #075985;
   background: #dff3ff;
 }
 
-.return-status-refunded {
+.return-status-refunded,
+.return-status-daHoanTien {
   color: #166534;
   background: #dcfce7;
 }
 
-.return-status-rejected {
+.return-status-rejected,
+.return-status-tuChoi {
   color: #991b1b;
   background: #fee2e2;
+}
+
+.return-message,
+.return-success {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+.return-message {
+  color: var(--color-muted);
+  background: #fffaf0;
+  border: 1px solid var(--color-border);
+}
+
+.return-success {
+  color: var(--color-green);
+  background: #effaf2;
+  border: 1px solid rgba(47, 143, 79, 0.22);
 }
 
 .return-actions {
@@ -374,9 +398,20 @@
 
 .return-item-row {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) 120px 70px 110px 120px;
+  grid-template-columns: 48px minmax(180px, 1fr) 130px 80px 80px 110px 120px;
   gap: 10px;
   align-items: center;
+}
+
+.return-item-image {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  color: var(--color-cream);
+  background: linear-gradient(135deg, var(--color-purple), var(--color-red));
+  border-radius: 12px;
+  font-weight: 900;
 }
 
 .return-item-row strong {

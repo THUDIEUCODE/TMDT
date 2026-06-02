@@ -1,101 +1,77 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { mockCategories } from '../../data/mockCategories'
+import {
+  createCategory,
+  deleteCategory,
+  getCategories,
+  getCategoryById,
+  getChildCategories,
+  mapCategoryFromApi,
+  toggleCategory,
+  updateCategory,
+} from '../../services/categoryService'
 import './CategoryManagementPage.css'
 
-const initialCategories = [
-  {
-    id: 'dac-san-hue',
-    name: 'Đặc sản Huế',
-    slug: 'dac-san-hue',
-    parentId: '',
-    description: 'Nhóm sản phẩm mang hương vị cố đô Huế.',
-    productCount: 8,
-    status: 'active',
-  },
-  {
-    id: 'dac-san-da-nang',
-    name: 'Đặc sản Đà Nẵng',
-    slug: 'dac-san-da-nang',
-    parentId: '',
-    description: 'Các món quà đặc trưng của thành phố biển Đà Nẵng.',
-    productCount: 6,
-    status: 'active',
-  },
-  {
-    id: 'dac-san-quang-nam',
-    name: 'Đặc sản Quảng Nam',
-    slug: 'dac-san-quang-nam',
-    parentId: '',
-    description: 'Bánh khô mè, mì Quảng khô và sản vật xứ Quảng.',
-    productCount: 7,
-    status: 'active',
-  },
-  {
-    id: 'dac-san-bien',
-    name: 'Đặc sản biển',
-    slug: 'dac-san-bien',
-    parentId: '',
-    description: 'Hải sản khô, mực rim, cá khô và món ngon vùng duyên hải.',
-    productCount: 5,
-    status: 'active',
-  },
-  {
-    id: 'do-uong-truyen-thong',
-    name: 'Đồ uống truyền thống',
-    slug: 'do-uong-truyen-thong',
-    parentId: '',
-    description: 'Trà, nước thảo mộc và thức uống địa phương.',
-    productCount: 4,
-    status: 'hidden',
-  },
-  {
-    id: 'qua-bieu-dac-san',
-    name: 'Quà biếu đặc sản',
-    slug: 'qua-bieu-dac-san',
-    parentId: '',
-    description: 'Hộp quà, combo biếu tặng cho gia đình và đối tác.',
-    productCount: 9,
-    status: 'active',
-  },
-  {
-    id: 'banh-keo-hue',
-    name: 'Bánh kẹo Huế',
-    slug: 'banh-keo-hue',
-    parentId: 'dac-san-hue',
-    description: 'Các loại bánh kẹo truyền thống của Huế.',
-    productCount: 3,
-    status: 'active',
-  },
-]
-
-const emptyForm = {
-  name: '',
-  slug: '',
-  parentId: '',
-  description: '',
-  status: 'active',
-}
+const fallbackCategories = mockCategories.map(mapCategoryFromApi)
 
 const statusLabels = {
-  active: 'Đang hiển thị',
-  hidden: 'Đang ẩn',
+  visible: 'Đang hiển thị',
+  hidden: 'Tạm ẩn',
 }
 
-const createSlug = (value) =>
-  value
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/g, 'd')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+const typeLabels = {
+  root: 'Danh mục lớn',
+  child: 'Danh mục con',
+}
+
+const emptyCategoryForm = {
+  tenDanhMuc: '',
+  maDanhMucCha: '',
+  moTa: '',
+  thuTuHienThi: '',
+  trangThai: 'true',
+}
+
+const getStatusKey = (category) => (category.status ? 'visible' : 'hidden')
+const getTypeKey = (category) => (category.parentId ? 'child' : 'root')
 
 function CategoryManagementPage() {
-  const [categories, setCategories] = useState(initialCategories)
+  const [categories, setCategories] = useState(fallbackCategories)
   const [searchTerm, setSearchTerm] = useState('')
-  const [modalMode, setModalMode] = useState(null)
-  const [editingCategoryId, setEditingCategoryId] = useState(null)
-  const [formData, setFormData] = useState(emptyForm)
+  const [typeFilter, setTypeFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [detailCategory, setDetailCategory] = useState(null)
+  const [detailChildren, setDetailChildren] = useState([])
+  const [formMode, setFormMode] = useState(null)
+  const [editingCategory, setEditingCategory] = useState(null)
+  const [categoryForm, setCategoryForm] = useState(emptyCategoryForm)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isDetailLoading, setIsDetailLoading] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [hasApiError, setHasApiError] = useState(false)
+  const [actionMessage, setActionMessage] = useState('')
+  const [actionError, setActionError] = useState('')
+
+  const loadCategories = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) {
+      setIsLoading(true)
+    }
+
+    try {
+      const apiCategories = await getCategories()
+      setCategories(apiCategories.length > 0 ? apiCategories : fallbackCategories)
+      setHasApiError(false)
+    } catch {
+      setCategories(fallbackCategories)
+      setHasApiError(true)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadCategories()
+  }, [loadCategories])
 
   const parentNameById = useMemo(() => {
     return categories.reduce((result, category) => {
@@ -104,94 +80,213 @@ function CategoryManagementPage() {
     }, {})
   }, [categories])
 
+  const treeRows = useMemo(() => {
+    const childrenByParent = categories.reduce((result, category) => {
+      if (category.parentId) {
+        result[category.parentId] = [...(result[category.parentId] || []), category]
+      }
+      return result
+    }, {})
+    const roots = categories.filter((category) => !category.parentId)
+    const orphanChildren = categories.filter((category) => category.parentId && !parentNameById[category.parentId])
+    const rows = []
+
+    roots
+      .sort((a, b) => a.displayOrder - b.displayOrder)
+      .forEach((root) => {
+        rows.push({ ...root, level: 0 })
+        ;(childrenByParent[root.id] || [])
+          .sort((a, b) => a.displayOrder - b.displayOrder)
+          .forEach((child) => rows.push({ ...child, level: 1 }))
+      })
+
+    orphanChildren
+      .sort((a, b) => a.displayOrder - b.displayOrder)
+      .forEach((child) => rows.push({ ...child, level: 1 }))
+
+    return rows
+  }, [categories, parentNameById])
+
+  const stats = useMemo(() => {
+    return categories.reduce(
+      (result, category) => {
+        const typeKey = getTypeKey(category)
+        const statusKey = getStatusKey(category)
+
+        result.total += 1
+        result.productCount += Number(category.productCount || 0)
+        result[typeKey] += 1
+        result[statusKey] += 1
+        return result
+      },
+      { total: 0, root: 0, child: 0, visible: 0, hidden: 0, productCount: 0 },
+    )
+  }, [categories])
+
   const filteredCategories = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase()
 
-    if (!normalizedSearch) {
-      return categories
-    }
-
-    return categories.filter(
-      (category) =>
+    return treeRows.filter((category) => {
+      const matchesSearch =
+        !normalizedSearch ||
         category.name.toLowerCase().includes(normalizedSearch) ||
-        category.slug.toLowerCase().includes(normalizedSearch),
-    )
-  }, [categories, searchTerm])
+        category.description.toLowerCase().includes(normalizedSearch) ||
+        category.id.toLowerCase().includes(normalizedSearch)
+      const matchesType = typeFilter === 'all' || getTypeKey(category) === typeFilter
+      const matchesStatus = statusFilter === 'all' || getStatusKey(category) === statusFilter
+
+      return matchesSearch && matchesType && matchesStatus
+    })
+  }, [searchTerm, statusFilter, treeRows, typeFilter])
+
+  const openDetailModal = async (category) => {
+    setActionError('')
+    setActionMessage('')
+    setDetailCategory(category)
+    setDetailChildren([])
+    setIsDetailLoading(true)
+
+    try {
+      const apiCategory = await getCategoryById(category.id)
+      setDetailCategory(apiCategory)
+
+      if (!apiCategory.parentId) {
+        const apiChildren = await getChildCategories(category.id)
+        setDetailChildren(apiChildren)
+      }
+    } catch (error) {
+      setDetailCategory(category)
+      setDetailChildren(categories.filter((item) => item.parentId === category.id))
+      setActionError(error?.message || 'Không thể tải chi tiết danh mục từ backend.')
+    } finally {
+      setIsDetailLoading(false)
+    }
+  }
 
   const openAddModal = () => {
-    setModalMode('add')
-    setEditingCategoryId(null)
-    setFormData(emptyForm)
+    setActionError('')
+    setActionMessage('')
+    setEditingCategory(null)
+    setCategoryForm(emptyCategoryForm)
+    setFormMode('add')
   }
 
   const openEditModal = (category) => {
-    setModalMode('edit')
-    setEditingCategoryId(category.id)
-    setFormData({
-      name: category.name,
-      slug: category.slug,
-      parentId: category.parentId,
-      description: category.description,
-      status: category.status,
+    setActionError('')
+    setActionMessage('')
+    setEditingCategory(category)
+    setCategoryForm({
+      tenDanhMuc: category.name || '',
+      maDanhMucCha: category.parentId || '',
+      moTa: category.description || '',
+      thuTuHienThi: category.displayOrder === 0 ? '0' : String(category.displayOrder || ''),
+      trangThai: category.status ? 'true' : 'false',
     })
+    setFormMode('edit')
   }
 
-  const closeModal = () => {
-    setModalMode(null)
-    setEditingCategoryId(null)
-    setFormData(emptyForm)
+  const closeFormModal = () => {
+    setFormMode(null)
+    setEditingCategory(null)
+    setCategoryForm(emptyCategoryForm)
   }
 
-  const handleFormChange = (event) => {
+  const handleCategoryFormChange = (event) => {
     const { name, value } = event.target
-
-    setFormData((current) => ({
-      ...current,
-      [name]: value,
-      slug: name === 'name' && !current.slug ? createSlug(value) : name === 'slug' ? value : current.slug,
-    }))
+    setCategoryForm((current) => ({ ...current, [name]: value }))
   }
 
-  const handleSaveCategory = (event) => {
+  const validateCategoryForm = () => {
+    if (!categoryForm.tenDanhMuc.trim()) {
+      return 'Tên danh mục không được rỗng.'
+    }
+
+    if (
+      formMode === 'edit' &&
+      editingCategory &&
+      categoryForm.maDanhMucCha &&
+      String(categoryForm.maDanhMucCha) === String(editingCategory.id)
+    ) {
+      return 'Danh mục cha không được là chính nó.'
+    }
+
+    if (categoryForm.thuTuHienThi !== '' && Number.isNaN(Number(categoryForm.thuTuHienThi))) {
+      return 'Thứ tự hiển thị phải là số hoặc để trống.'
+    }
+
+    return ''
+  }
+
+  const buildCategoryPayload = () => ({
+    tenDanhMuc: categoryForm.tenDanhMuc.trim(),
+    maDanhMucCha: categoryForm.maDanhMucCha ? Number(categoryForm.maDanhMucCha) : null,
+    moTa: categoryForm.moTa.trim(),
+    thuTuHienThi: categoryForm.thuTuHienThi === '' ? null : Number(categoryForm.thuTuHienThi),
+    trangThai: categoryForm.trangThai === 'true',
+  })
+
+  const saveCategory = async (event) => {
     event.preventDefault()
+    const validationMessage = validateCategoryForm()
 
-    const nextCategoryData = {
-      name: formData.name.trim(),
-      slug: createSlug(formData.slug || formData.name),
-      parentId: formData.parentId,
-      description: formData.description.trim(),
-      status: formData.status,
+    if (validationMessage) {
+      setActionError(validationMessage)
+      return
     }
 
-    if (modalMode === 'edit') {
-      setCategories((currentCategories) =>
-        currentCategories.map((category) =>
-          category.id === editingCategoryId ? { ...category, ...nextCategoryData } : category,
-        ),
-      )
-    } else {
-      const id = `${nextCategoryData.slug}-${Date.now()}`
-      setCategories((currentCategories) => [
-        {
-          ...nextCategoryData,
-          id,
-          productCount: 0,
-        },
-        ...currentCategories,
-      ])
-    }
+    setIsSaving(true)
+    setActionError('')
 
-    closeModal()
+    try {
+      if (formMode === 'edit') {
+        await updateCategory(editingCategory.id, buildCategoryPayload())
+        setActionMessage('Đã cập nhật danh mục.')
+      } else {
+        await createCategory(buildCategoryPayload())
+        setActionMessage('Đã thêm danh mục.')
+      }
+
+      closeFormModal()
+      await loadCategories()
+    } catch (error) {
+      setActionError(error?.message || 'Không kết nối được backend.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
-  const toggleCategoryStatus = (categoryId) => {
-    setCategories((currentCategories) =>
-      currentCategories.map((category) =>
-        category.id === categoryId
-          ? { ...category, status: category.status === 'hidden' ? 'active' : 'hidden' }
-          : category,
-      ),
-    )
+  const handleToggleCategory = async (category) => {
+    setIsSaving(true)
+    setActionError('')
+
+    try {
+      await toggleCategory(category.id)
+      setActionMessage(category.status ? 'Đã ẩn danh mục.' : 'Đã hiện danh mục.')
+      await loadCategories()
+    } catch (error) {
+      setActionError(error?.message || 'Không kết nối được backend.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleDeleteCategory = async (category) => {
+    if (!window.confirm('Bạn có chắc muốn xóa mềm danh mục này?')) {
+      return
+    }
+
+    setIsSaving(true)
+    setActionError('')
+
+    try {
+      await deleteCategory(category.id)
+      setActionMessage('Đã xóa mềm danh mục.')
+      await loadCategories()
+    } catch (error) {
+      setActionError(error?.message || 'Không kết nối được backend.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -200,140 +295,169 @@ function CategoryManagementPage() {
         <div>
           <span>Khu vực nhân viên</span>
           <h1>Quản lý danh mục</h1>
-          <p>Tạo, chỉnh sửa và kiểm soát trạng thái hiển thị của danh mục sản phẩm.</p>
+          <p>Theo dõi danh mục thật từ backend, cấu trúc cha/con và trạng thái hiển thị.</p>
         </div>
         <button className="button" type="button" onClick={openAddModal}>
           Thêm danh mục
         </button>
       </section>
 
+      <section className="category-stat-grid">
+        <article><span>Tổng danh mục</span><strong>{stats.total}</strong></article>
+        <article><span>Danh mục lớn</span><strong>{stats.root}</strong></article>
+        <article><span>Danh mục con</span><strong>{stats.child}</strong></article>
+        <article><span>Đang hiển thị</span><strong>{stats.visible}</strong></article>
+        <article><span>Tạm ẩn</span><strong>{stats.hidden}</strong></article>
+        <article><span>Tổng sản phẩm</span><strong>{stats.productCount}</strong></article>
+      </section>
+
+      {isLoading ? <p className="category-message">Đang tải danh mục...</p> : null}
+      {hasApiError ? <p className="category-message">Không kết nối được backend, đang dùng dữ liệu mẫu.</p> : null}
+      {actionMessage ? <p className="category-success">{actionMessage}</p> : null}
+      {actionError ? <p className="category-error">{actionError}</p> : null}
+
       <section className="category-management-toolbar">
         <label>
           Tìm kiếm
-          <input
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-            placeholder="Nhập tên danh mục hoặc slug"
-          />
+          <input value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Nhập tên hoặc mã danh mục" />
+        </label>
+        <label>
+          Loại danh mục
+          <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
+            <option value="all">Tất cả</option>
+            <option value="root">Danh mục lớn</option>
+            <option value="child">Danh mục con</option>
+          </select>
+        </label>
+        <label>
+          Trạng thái
+          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+            <option value="all">Tất cả</option>
+            <option value="visible">Đang hiển thị</option>
+            <option value="hidden">Tạm ẩn</option>
+          </select>
         </label>
       </section>
 
       <section className="category-table-card">
         <div className="category-table-summary">
           <strong>{filteredCategories.length} danh mục</strong>
-          <span>Dữ liệu dùng state nội bộ, không kết nối backend.</span>
+          <span>Danh mục cha hiển thị trước, danh mục con thụt vào ngay bên dưới.</span>
         </div>
 
         <div className="category-table">
           <div className="category-table-head">
-            <span>Tên danh mục</span>
-            <span>Slug</span>
-            <span>Danh mục cha</span>
-            <span>Số sản phẩm</span>
-            <span>Trạng thái</span>
-            <span>Thao tác</span>
+            <span>Mã danh mục</span><span>Tên danh mục</span><span>Loại</span><span>Danh mục cha</span><span>Mô tả</span><span>Thứ tự</span><span>Sản phẩm</span><span>Nhóm nhỏ</span><span>Trạng thái</span><span>Thao tác</span>
           </div>
 
           {filteredCategories.map((category) => (
-            <article className="category-table-row" key={category.id}>
-              <div>
+            <article className={`category-table-row category-level-${category.level || 0}`} key={category.id}>
+              <strong>{category.id}</strong>
+              <div className="category-name-cell">
                 <strong>{category.name}</strong>
-                <small>{category.description}</small>
+                <small>{category.level ? 'Danh mục con' : 'Danh mục lớn'}</small>
               </div>
-              <span>{category.slug}</span>
-              <span>{category.parentId ? parentNameById[category.parentId] : 'Không có'}</span>
+              <span className={`category-type category-type-${getTypeKey(category)}`}>{typeLabels[getTypeKey(category)]}</span>
+              <span>{category.parentId ? parentNameById[category.parentId] || category.parentId : 'Không có'}</span>
+              <span>{category.description || 'Không có'}</span>
+              <span>{category.displayOrder}</span>
               <span>{category.productCount}</span>
-              <span className={`category-status category-status-${category.status}`}>
-                {statusLabels[category.status]}
-              </span>
+              <span>{category.childCount}</span>
+              <span className={`category-status category-status-${getStatusKey(category)}`}>{statusLabels[getStatusKey(category)]}</span>
               <div className="category-actions">
-                <button type="button" onClick={() => openEditModal(category)}>
-                  Sửa
-                </button>
-                <button type="button" onClick={() => toggleCategoryStatus(category.id)}>
-                  {category.status === 'hidden' ? 'Hiện' : 'Ẩn'}
-                </button>
+                <button type="button" disabled={isSaving} onClick={() => openDetailModal(category)}>Xem chi tiết</button>
+                <button type="button" disabled={isSaving} onClick={() => openEditModal(category)}>Sửa</button>
+                <button type="button" disabled={isSaving} onClick={() => handleToggleCategory(category)}>{category.status ? 'Ẩn' : 'Hiện'}</button>
+                <button type="button" disabled={isSaving} onClick={() => handleDeleteCategory(category)}>Xóa</button>
               </div>
             </article>
           ))}
+
+          {filteredCategories.length === 0 && !isLoading ? (
+            <section className="empty-products">
+              <h2>Chưa có danh mục phù hợp</h2>
+              <p>Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc.</p>
+            </section>
+          ) : null}
         </div>
       </section>
 
-      {modalMode ? (
+      {detailCategory ? (
         <div className="category-modal-backdrop" role="presentation">
-          <form className="category-modal" onSubmit={handleSaveCategory}>
+          <section className="category-modal category-detail-modal">
             <div className="category-modal-heading">
-              <span>{modalMode === 'add' ? 'Thêm mới' : 'Chỉnh sửa'}</span>
-              <h2>{modalMode === 'add' ? 'Thêm danh mục' : 'Sửa danh mục'}</h2>
+              <span>Chi tiết danh mục</span>
+              <h2>{detailCategory.name}</h2>
+            </div>
+
+            {isDetailLoading ? <p className="category-message">Đang tải chi tiết danh mục...</p> : null}
+
+            <div className="category-detail-grid">
+              <div><span>Mã danh mục</span><strong>{detailCategory.id}</strong></div>
+              <div><span>Tên danh mục</span><strong>{detailCategory.name}</strong></div>
+              <div><span>Danh mục cha</span><strong>{detailCategory.parentId ? parentNameById[detailCategory.parentId] || detailCategory.parentId : 'Không có'}</strong></div>
+              <div><span>Thứ tự hiển thị</span><strong>{detailCategory.displayOrder}</strong></div>
+              <div><span>Trạng thái</span><strong>{statusLabels[getStatusKey(detailCategory)]}</strong></div>
+              <div><span>Số sản phẩm</span><strong>{detailCategory.productCount}</strong></div>
+              <div><span>Số nhóm nhỏ</span><strong>{detailCategory.childCount}</strong></div>
+              <div className="category-detail-full"><span>Mô tả</span><strong>{detailCategory.description || 'Không có'}</strong></div>
+            </div>
+
+            {!detailCategory.parentId ? (
+              <div className="category-children-panel">
+                <h3>Danh mục con</h3>
+                {detailChildren.length > 0 ? (
+                  <div className="category-children-list">
+                    {detailChildren.map((child) => (
+                      <span key={child.id}>{child.name}<small>{child.productCount} sản phẩm</small></span>
+                    ))}
+                  </div>
+                ) : (
+                  <p>Danh mục này chưa có danh mục con.</p>
+                )}
+              </div>
+            ) : null}
+
+            <div className="category-modal-actions">
+              <button type="button" onClick={() => setDetailCategory(null)}>Đóng</button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {formMode ? (
+        <div className="category-modal-backdrop" role="presentation">
+          <form className="category-modal" onSubmit={saveCategory}>
+            <div className="category-modal-heading">
+              <span>{formMode === 'add' ? 'Thêm mới' : 'Chỉnh sửa'}</span>
+              <h2>{formMode === 'add' ? 'Thêm danh mục' : 'Sửa danh mục'}</h2>
             </div>
 
             <div className="category-form-grid">
-              <label>
-                Tên danh mục
-                <input
-                  required
-                  name="name"
-                  value={formData.name}
-                  onChange={handleFormChange}
-                  placeholder="Ví dụ: Đặc sản Huế"
-                />
-              </label>
-
-              <label>
-                Slug
-                <input
-                  required
-                  name="slug"
-                  value={formData.slug}
-                  onChange={handleFormChange}
-                  placeholder="dac-san-hue"
-                />
-              </label>
-
+              <label>Tên danh mục<input name="tenDanhMuc" value={categoryForm.tenDanhMuc} onChange={handleCategoryFormChange} /></label>
               <label>
                 Danh mục cha
-                <select name="parentId" value={formData.parentId} onChange={handleFormChange}>
+                <select name="maDanhMucCha" value={categoryForm.maDanhMucCha} onChange={handleCategoryFormChange}>
                   <option value="">Không có</option>
                   {categories
-                    .filter((category) => category.id !== editingCategoryId)
-                    .map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
+                    .filter((category) => !editingCategory || String(category.id) !== String(editingCategory.id))
+                    .map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
                 </select>
               </label>
-
+              <label>Thứ tự hiển thị<input name="thuTuHienThi" value={categoryForm.thuTuHienThi} onChange={handleCategoryFormChange} /></label>
               <label>
                 Trạng thái
-                <select name="status" value={formData.status} onChange={handleFormChange}>
-                  {Object.entries(statusLabels).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
+                <select name="trangThai" value={categoryForm.trangThai} onChange={handleCategoryFormChange}>
+                  <option value="true">Đang hiển thị</option>
+                  <option value="false">Tạm ẩn</option>
                 </select>
               </label>
-
-              <label className="category-form-full">
-                Mô tả
-                <textarea
-                  name="description"
-                  rows="4"
-                  value={formData.description}
-                  onChange={handleFormChange}
-                  placeholder="Nhập mô tả ngắn cho danh mục"
-                />
-              </label>
+              <label className="category-form-full">Mô tả<textarea name="moTa" rows="4" value={categoryForm.moTa} onChange={handleCategoryFormChange} /></label>
             </div>
 
             <div className="category-modal-actions">
-              <button type="button" onClick={closeModal}>
-                Hủy
-              </button>
-              <button className="button" type="submit">
-                Lưu
-              </button>
+              <button type="button" disabled={isSaving} onClick={closeFormModal}>Đóng</button>
+              <button className="button" type="submit" disabled={isSaving}>{isSaving ? 'Đang lưu...' : 'Lưu'}</button>
             </div>
           </form>
         </div>

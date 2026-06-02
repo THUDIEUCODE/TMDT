@@ -7,6 +7,7 @@
 .account-stat-grid article,
 .account-filter-panel,
 .account-table-card,
+.account-message,
 .account-modal {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -75,6 +76,30 @@
   font-size: 28px;
 }
 
+.account-message {
+  padding: 12px 16px;
+  color: var(--color-purple);
+  font-weight: 800;
+}
+
+.account-message-warning {
+  color: #8a4d00;
+  background: #fff2c6;
+  border-color: #fde68a;
+}
+
+.account-message-error {
+  color: #991b1b;
+  background: #fee2e2;
+  border-color: #fecaca;
+}
+
+.account-message-success {
+  color: #166534;
+  background: #dcfce7;
+  border-color: #bbf7d0;
+}
+
 .account-filter-panel {
   display: grid;
   grid-template-columns: minmax(280px, 1fr) 220px 220px;
@@ -95,6 +120,7 @@
 .account-filter-panel select,
 .account-form-grid input,
 .account-form-grid select,
+.account-role-modal input,
 .account-role-modal select {
   width: 100%;
   min-height: 42px;
@@ -115,6 +141,7 @@
 .account-filter-panel select:focus,
 .account-form-grid input:focus,
 .account-form-grid select:focus,
+.account-role-modal input:focus,
 .account-role-modal select:focus {
   border-color: var(--color-orange);
   box-shadow: 0 0 0 3px rgba(243, 156, 18, 0.16);
@@ -150,10 +177,10 @@
 .account-table-head,
 .account-table-row {
   display: grid;
-  grid-template-columns: 64px 170px 210px 130px 120px 110px 130px minmax(260px, 1fr);
+  grid-template-columns: 64px 170px 210px 130px 130px 150px 120px 130px minmax(360px, 1fr);
   gap: 12px;
   align-items: center;
-  min-width: 1260px;
+  min-width: 1460px;
 }
 
 .account-table-head {
@@ -210,6 +237,21 @@
   background: #f2e4f8;
 }
 
+.account-role-khachhang {
+  color: #075985;
+  background: #dff3ff;
+}
+
+.account-role-nhanvien {
+  color: #8a4d00;
+  background: #fff2c6;
+}
+
+.account-role-quantrivien {
+  color: #4b235d;
+  background: #f2e4f8;
+}
+
 .account-status-active {
   color: #166534;
   background: #dcfce7;
@@ -242,6 +284,22 @@
   color: #fff;
   background: var(--color-red);
   border-color: var(--color-red);
+}
+
+.account-actions button:disabled,
+.account-modal-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.account-empty-state {
+  margin: 0;
+  padding: 14px;
+  color: var(--color-muted);
+  background: #fffaf0;
+  border: 1px dashed var(--color-border);
+  border-radius: 14px;
+  font-weight: 800;
 }
 
 .account-modal-backdrop {

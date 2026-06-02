@@ -3,6 +3,22 @@
   gap: 22px;
 }
 
+.admin-dashboard-message {
+  padding: 12px 16px;
+  color: var(--color-purple);
+  font-weight: 800;
+  background: #fffaf0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-dashboard-error {
+  color: #991b1b;
+  background: #fee2e2;
+  border-color: #fecaca;
+}
+
 .admin-dashboard-header,
 .admin-stat-card,
 .admin-panel {
@@ -212,6 +228,34 @@
   background: #ea580c;
 }
 
+.admin-status-choXacNhan {
+  background: #f59e0b;
+}
+
+.admin-status-daXacNhan {
+  background: #7c3aed;
+}
+
+.admin-status-dangGiao {
+  background: #0284c7;
+}
+
+.admin-status-khachDaNhan {
+  background: #0d9488;
+}
+
+.admin-status-daGiao {
+  background: #16a34a;
+}
+
+.admin-status-daHuy {
+  background: #dc2626;
+}
+
+.admin-status-dangHoanHang {
+  background: #ea580c;
+}
+
 .admin-order-status-list strong,
 .admin-top-products strong,
 .admin-alert-grid strong {
@@ -232,10 +276,10 @@
 .admin-table-head,
 .admin-order-row {
   display: grid;
-  grid-template-columns: 140px 160px 110px 130px 130px;
+  grid-template-columns: 120px 150px 125px 120px 130px 150px 150px;
   gap: 12px;
   align-items: center;
-  min-width: 760px;
+  min-width: 1050px;
 }
 
 .admin-table-head {
@@ -255,6 +299,11 @@
 
 .admin-order-row strong {
   color: var(--color-purple);
+}
+
+.admin-order-row a {
+  color: var(--color-purple);
+  font-weight: 900;
 }
 
 .admin-order-row b {
@@ -299,6 +348,41 @@
   background: #ffedd5;
 }
 
+.admin-order-choXacNhan {
+  color: #8a4d00;
+  background: #fff2c6;
+}
+
+.admin-order-daXacNhan {
+  color: #4b235d;
+  background: #f2e4f8;
+}
+
+.admin-order-dangGiao {
+  color: #075985;
+  background: #dff3ff;
+}
+
+.admin-order-khachDaNhan {
+  color: #0f766e;
+  background: #ccfbf1;
+}
+
+.admin-order-daGiao {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.admin-order-daHuy {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.admin-order-dangHoanHang {
+  color: #9a3412;
+  background: #ffedd5;
+}
+
 .admin-top-products div {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -337,6 +421,66 @@
 .admin-alert-grid a:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-sm);
+}
+
+.admin-low-stock-list,
+.admin-quick-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-low-stock-list a,
+.admin-quick-grid a {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  background: #fffaf0;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.admin-low-stock-list a {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.admin-low-stock-list a:hover,
+.admin-quick-grid a:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-low-stock-list strong,
+.admin-quick-grid strong {
+  color: var(--color-purple);
+}
+
+.admin-low-stock-list span,
+.admin-low-stock-list small,
+.admin-quick-grid span,
+.admin-empty-state {
+  color: var(--color-muted);
+}
+
+.admin-low-stock-list span,
+.admin-low-stock-list small {
+  grid-column: 1;
+}
+
+.admin-low-stock-list b {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  align-self: center;
+  color: var(--color-red);
+}
+
+.admin-empty-state {
+  margin: 0;
+  padding: 12px;
+  background: #fffaf0;
+  border: 1px dashed var(--color-border);
+  border-radius: 14px;
+  font-weight: 800;
 }
 
 @media (max-width: 1120px) {
@@ -383,5 +527,16 @@
   .admin-order-row {
     grid-template-columns: 1fr;
     min-width: 0;
+  }
+
+  .admin-low-stock-list a {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-low-stock-list span,
+  .admin-low-stock-list small,
+  .admin-low-stock-list b {
+    grid-column: auto;
+    grid-row: auto;
   }
 }

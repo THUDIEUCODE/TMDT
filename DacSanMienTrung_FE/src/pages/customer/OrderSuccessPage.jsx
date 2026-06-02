@@ -1,6 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
-import { getOrderById } from '../../services/orderService'
+import {
+  confirmWalletPayment,
+  getOrderById,
+  orderStatusLabels,
+  paymentMethodLabels,
+  paymentStatusLabels,
+} from '../../services/orderService'
+import { getCurrentUserId } from '../../utils/authStorage'
 
 const latestOrderStorageKey = 'latestOrder'
 const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`
@@ -33,31 +40,73 @@ function OrderSuccessPage() {
   const orderId = searchParams.get('orderId')
   const [order, setOrder] = useState(location.state?.order || getStoredOrder())
   const [isLoading, setIsLoading] = useState(Boolean(orderId))
+  const [isConfirmingWallet, setIsConfirmingWallet] = useState(false)
   const [hasApiError, setHasApiError] = useState(false)
+  const [actionMessage, setActionMessage] = useState('')
+  const [actionError, setActionError] = useState('')
+
+  const loadOrder = async ({ silent = false } = {}) => {
+    if (!orderId) {
+      return
+    }
+
+    if (!silent) {
+      setIsLoading(true)
+    }
+
+    try {
+      const apiOrder = await getOrderById(orderId)
+      setOrder(apiOrder)
+      localStorage.setItem(latestOrderStorageKey, JSON.stringify(apiOrder))
+      setHasApiError(false)
+    } catch {
+      setOrder((currentOrder) => currentOrder || getStoredOrder())
+      setHasApiError(true)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   useEffect(() => {
     if (!orderId) {
       return undefined
     }
 
-    const loadTimer = window.setTimeout(async () => {
-      try {
-        const apiOrder = await getOrderById(orderId)
-        setOrder(apiOrder)
-        localStorage.setItem(latestOrderStorageKey, JSON.stringify(apiOrder))
-        setHasApiError(false)
-      } catch {
-        setOrder((currentOrder) => currentOrder || getStoredOrder())
-        setHasApiError(true)
-      } finally {
-        setIsLoading(false)
-      }
+    const loadTimer = window.setTimeout(() => {
+      loadOrder()
     }, 0)
 
     return () => {
       window.clearTimeout(loadTimer)
     }
   }, [orderId])
+
+  const submitWalletPayment = async () => {
+    const currentOrderId = order?.code || order?.id || orderId
+    const maNguoiDung = getCurrentUserId() || order?.maNguoiDung
+
+    setActionError('')
+    setActionMessage('')
+
+    if (!maNguoiDung) {
+      setActionError('Vui lòng đăng nhập để xác nhận thanh toán ví.')
+      return
+    }
+
+    try {
+      setIsConfirmingWallet(true)
+      await confirmWalletPayment(currentOrderId, {
+        maNguoiDung,
+        maGiaoDich: `VI-DEMO-DH${currentOrderId}`,
+      })
+      setActionMessage('Đã xác nhận thanh toán ví thành công.')
+      await loadOrder({ silent: true })
+    } catch (error) {
+      setActionError(error?.message || 'Không thể xác nhận thanh toán ví.')
+    } finally {
+      setIsConfirmingWallet(false)
+    }
+  }
 
   if (!order && !isLoading) {
     return (
@@ -89,6 +138,8 @@ function OrderSuccessPage() {
             Không kết nối được backend, đang hiển thị dữ liệu đơn hàng vừa tạo.
           </p>
         ) : null}
+        {actionMessage ? <p className="form-success">{actionMessage}</p> : null}
+        {actionError ? <p className="form-error">{actionError}</p> : null}
 
         {order ? (
           <>
@@ -104,7 +155,11 @@ function OrderSuccessPage() {
               </div>
               <div>
                 <span>Trạng thái đơn hàng</span>
-                <strong>{order.status}</strong>
+                <strong>{orderStatusLabels[order.status] || order.status}</strong>
+              </div>
+              <div>
+                <span>Trạng thái thanh toán</span>
+                <strong>{paymentStatusLabels[order.paymentStatus] || order.paymentStatus || 'Đang cập nhật'}</strong>
               </div>
               <div>
                 <span>Người nhận</span>
@@ -120,9 +175,45 @@ function OrderSuccessPage() {
               </div>
               <div>
                 <span>Phương thức thanh toán</span>
-                <strong>{order.paymentMethod}</strong>
+                <strong>{paymentMethodLabels[order.paymentMethod] || order.paymentMethod}</strong>
+              </div>
+              <div>
+                <span>Tổng thanh toán</span>
+                <strong>{formatCurrency(order.total)}</strong>
               </div>
             </div>
+
+            {order.paymentMethod === 'COD' ? (
+              <div className="payment-note">
+                <h3>Thanh toán khi nhận hàng</h3>
+                <p>Bạn sẽ thanh toán khi nhận hàng. Sau khi nhận hàng, vui lòng bấm xác nhận đã nhận hàng trong chi tiết đơn hàng.</p>
+              </div>
+            ) : null}
+
+            {order.paymentMethod === 'chuyenKhoan' ? (
+              <div className="payment-note">
+                <h3>Hướng dẫn chuyển khoản</h3>
+                <p>Ngân hàng: Demo Bank</p>
+                <p>Chủ tài khoản: DAC SAN MIEN TRUNG</p>
+                <p>Số tài khoản: 0123456789</p>
+                <p>Số tiền: {formatCurrency(order.total)}</p>
+                <p>Nội dung chuyển khoản: DH{order.code || order.id} - {order.receiverPhone}</p>
+                <p>Sau khi bạn chuyển khoản, nhân viên sẽ kiểm tra và xác nhận thanh toán trên hệ thống.</p>
+              </div>
+            ) : null}
+
+            {order.paymentMethod === 'vi' ? (
+              <div className="payment-note">
+                <h3>Thanh toán ví điện tử</h3>
+                {order.paymentStatus === 'choThanhToan' ? (
+                  <button className="button" type="button" onClick={submitWalletPayment} disabled={isConfirmingWallet}>
+                    {isConfirmingWallet ? 'Đang xác nhận...' : 'Xác nhận thanh toán ví demo'}
+                  </button>
+                ) : (
+                  <p>Ví điện tử đã thanh toán thành công.</p>
+                )}
+              </div>
+            ) : null}
 
             {order.items?.length > 0 ? (
               <div className="checkout-mini-items order-success-items">

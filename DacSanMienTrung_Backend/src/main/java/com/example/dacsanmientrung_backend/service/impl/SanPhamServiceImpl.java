@@ -1,11 +1,13 @@
 package com.example.dacsanmientrung_backend.service.impl;
 
+import com.example.dacsanmientrung_backend.dto.request.SanPhamRequest;
 import com.example.dacsanmientrung_backend.dto.response.BienTheResponse;
 import com.example.dacsanmientrung_backend.dto.response.SanPhamDetailResponse;
 import com.example.dacsanmientrung_backend.dto.response.SanPhamResponse;
 import com.example.dacsanmientrung_backend.entity.BienThe;
 import com.example.dacsanmientrung_backend.entity.DanhMuc;
 import com.example.dacsanmientrung_backend.entity.SanPham;
+import com.example.dacsanmientrung_backend.exception.BadRequestException;
 import com.example.dacsanmientrung_backend.exception.ResourceNotFoundException;
 import com.example.dacsanmientrung_backend.repository.BienTheRepository;
 import com.example.dacsanmientrung_backend.repository.DanhMucRepository;
@@ -106,6 +108,85 @@ public class SanPhamServiceImpl implements SanPhamService {
                 .toList();
     }
 
+    @Override
+    @Transactional
+    public SanPhamDetailResponse createProduct(SanPhamRequest request) {
+        validateProductRequest(request);
+
+        SanPham sanPham = new SanPham();
+        applyProductRequest(sanPham, request);
+        sanPham.setTrangThai(request.getTrangThai() != null ? request.getTrangThai() : true);
+
+        return toDetailResponse(sanPhamRepository.save(sanPham));
+    }
+
+    @Override
+    @Transactional
+    public SanPhamDetailResponse updateProduct(Integer id, SanPhamRequest request) {
+        validateProductRequest(request);
+
+        SanPham sanPham = sanPhamRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay san pham voi ma: " + id));
+        applyProductRequest(sanPham, request);
+        sanPham.setTrangThai(request.getTrangThai() != null ? request.getTrangThai() : sanPham.getTrangThai());
+
+        return toDetailResponse(sanPhamRepository.save(sanPham));
+    }
+
+    @Override
+    @Transactional
+    public SanPhamDetailResponse toggleProduct(Integer id) {
+        SanPham sanPham = sanPhamRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay san pham voi ma: " + id));
+        sanPham.setTrangThai(!Boolean.TRUE.equals(sanPham.getTrangThai()));
+        return toDetailResponse(sanPhamRepository.save(sanPham));
+    }
+
+    @Override
+    @Transactional
+    public void softDeleteProduct(Integer id) {
+        SanPham sanPham = sanPhamRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay san pham voi ma: " + id));
+        sanPham.setTrangThai(false);
+        sanPhamRepository.save(sanPham);
+    }
+
+    private void validateProductRequest(SanPhamRequest request) {
+        if (request == null) {
+            throw new BadRequestException("Du lieu san pham khong duoc rong");
+        }
+
+        if (request.getTenSanPham() == null || request.getTenSanPham().isBlank()) {
+            throw new BadRequestException("Ten san pham khong duoc rong");
+        }
+
+        if (request.getMaDanhMuc() == null) {
+            throw new BadRequestException("Ma danh muc khong duoc rong");
+        }
+
+        if (request.getGiaNiemYet() == null || request.getGiaNiemYet().compareTo(BigDecimal.ZERO) < 0) {
+            throw new BadRequestException("Gia niem yet phai lon hon hoac bang 0");
+        }
+    }
+
+    private void applyProductRequest(SanPham sanPham, SanPhamRequest request) {
+        DanhMuc danhMuc = danhMucRepository.findById(request.getMaDanhMuc())
+                .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay danh muc voi ma: " + request.getMaDanhMuc()));
+
+        sanPham.setDanhMuc(danhMuc);
+        sanPham.setTenSanPham(request.getTenSanPham().trim());
+        sanPham.setMoTa(request.getMoTa());
+        sanPham.setThanhPhan(request.getThanhPhan());
+        sanPham.setHuongDanBaoQuan(request.getHuongDanBaoQuan());
+        sanPham.setDacTrungVanHoa(request.getDacTrungVanHoa());
+        sanPham.setLichSuSanPham(request.getLichSuSanPham());
+        sanPham.setTenTinh(request.getTenTinh());
+        sanPham.setVungMien(request.getVungMien());
+        sanPham.setMoTaVanHoaTinh(request.getMoTaVanHoaTinh());
+        sanPham.setGiaNiemYet(request.getGiaNiemYet());
+        sanPham.setHinhAnh(request.getHinhAnh());
+    }
+
     private SanPhamResponse toResponse(SanPham sanPham) {
         List<BienThe> activeVariants = getActiveVariants(sanPham);
         DanhMuc danhMuc = sanPham.getDanhMuc();
@@ -137,6 +218,33 @@ public class SanPhamServiceImpl implements SanPhamService {
                 bienThe.getHanSuDung(),
                 bienThe.getHinhAnh(),
                 bienThe.getTrangThai()
+        );
+    }
+
+    private SanPhamDetailResponse toDetailResponse(SanPham sanPham) {
+        List<BienTheResponse> bienThes = getActiveVariants(sanPham)
+                .stream()
+                .map(this::toBienTheResponse)
+                .toList();
+
+        DanhMuc danhMuc = sanPham.getDanhMuc();
+        return new SanPhamDetailResponse(
+                sanPham.getMaSanPham(),
+                sanPham.getTenSanPham(),
+                danhMuc.getMaDanhMuc(),
+                danhMuc.getTenDanhMuc(),
+                sanPham.getMoTa(),
+                sanPham.getThanhPhan(),
+                sanPham.getHuongDanBaoQuan(),
+                sanPham.getDacTrungVanHoa(),
+                sanPham.getLichSuSanPham(),
+                sanPham.getTenTinh(),
+                sanPham.getVungMien(),
+                sanPham.getMoTaVanHoaTinh(),
+                sanPham.getGiaNiemYet(),
+                sanPham.getHinhAnh(),
+                sanPham.getTrangThai(),
+                bienThes
         );
     }
 

@@ -1,7 +1,9 @@
 package com.example.dacsanmientrung_backend.service.impl;
 
+import com.example.dacsanmientrung_backend.dto.request.DanhMucRequest;
 import com.example.dacsanmientrung_backend.dto.response.DanhMucResponse;
 import com.example.dacsanmientrung_backend.entity.DanhMuc;
+import com.example.dacsanmientrung_backend.exception.BadRequestException;
 import com.example.dacsanmientrung_backend.exception.ResourceNotFoundException;
 import com.example.dacsanmientrung_backend.repository.DanhMucRepository;
 import com.example.dacsanmientrung_backend.repository.SanPhamRepository;
@@ -57,6 +59,77 @@ public class DanhMucServiceImpl implements DanhMucService {
         DanhMuc danhMuc = danhMucRepository.findByMaDanhMucAndTrangThaiTrue(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy danh mục với mã: " + id));
         return toResponse(danhMuc);
+    }
+
+    @Override
+    @Transactional
+    public DanhMucResponse createCategory(DanhMucRequest request) {
+        validateCategoryRequest(request);
+
+        DanhMuc danhMuc = new DanhMuc();
+        applyCategoryRequest(danhMuc, request);
+        danhMuc.setTrangThai(request.getTrangThai() != null ? request.getTrangThai() : true);
+
+        return toResponse(danhMucRepository.save(danhMuc));
+    }
+
+    @Override
+    @Transactional
+    public DanhMucResponse updateCategory(Integer id, DanhMucRequest request) {
+        validateCategoryRequest(request);
+
+        DanhMuc danhMuc = danhMucRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay danh muc voi ma: " + id));
+
+        if (request.getMaDanhMucCha() != null && request.getMaDanhMucCha().equals(id)) {
+            throw new BadRequestException("Danh muc khong duoc lam cha cua chinh no");
+        }
+
+        applyCategoryRequest(danhMuc, request);
+        danhMuc.setTrangThai(request.getTrangThai() != null ? request.getTrangThai() : danhMuc.getTrangThai());
+
+        return toResponse(danhMucRepository.save(danhMuc));
+    }
+
+    @Override
+    @Transactional
+    public DanhMucResponse toggleCategory(Integer id) {
+        DanhMuc danhMuc = danhMucRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay danh muc voi ma: " + id));
+        danhMuc.setTrangThai(!Boolean.TRUE.equals(danhMuc.getTrangThai()));
+        return toResponse(danhMucRepository.save(danhMuc));
+    }
+
+    @Override
+    @Transactional
+    public void softDeleteCategory(Integer id) {
+        DanhMuc danhMuc = danhMucRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay danh muc voi ma: " + id));
+        danhMuc.setTrangThai(false);
+        danhMucRepository.save(danhMuc);
+    }
+
+    private void validateCategoryRequest(DanhMucRequest request) {
+        if (request == null) {
+            throw new BadRequestException("Du lieu danh muc khong duoc rong");
+        }
+
+        if (request.getTenDanhMuc() == null || request.getTenDanhMuc().isBlank()) {
+            throw new BadRequestException("Ten danh muc khong duoc rong");
+        }
+    }
+
+    private void applyCategoryRequest(DanhMuc danhMuc, DanhMucRequest request) {
+        DanhMuc danhMucCha = null;
+        if (request.getMaDanhMucCha() != null) {
+            danhMucCha = danhMucRepository.findById(request.getMaDanhMucCha())
+                    .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay danh muc cha voi ma: " + request.getMaDanhMucCha()));
+        }
+
+        danhMuc.setDanhMucCha(danhMucCha);
+        danhMuc.setTenDanhMuc(request.getTenDanhMuc().trim());
+        danhMuc.setMoTa(request.getMoTa());
+        danhMuc.setThuTuHienThi(request.getThuTuHienThi());
     }
 
     private DanhMucResponse toResponse(DanhMuc danhMuc) {

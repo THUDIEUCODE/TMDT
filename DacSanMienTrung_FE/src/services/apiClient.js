@@ -14,7 +14,25 @@ async function requestApi(path, options = {}) {
   })
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status}`)
+    let errorMessage = `API request failed: ${response.status}`
+
+    try {
+      const errorPayload = await response.json()
+      errorMessage =
+        errorPayload?.message ||
+        errorPayload?.error ||
+        errorPayload?.data?.message ||
+        errorMessage
+    } catch {
+      try {
+        const errorText = await response.text()
+        errorMessage = errorText || errorMessage
+      } catch {
+        // Keep the status fallback when the backend does not return a readable body.
+      }
+    }
+
+    throw new Error(errorMessage)
   }
 
   if (response.status === 204) {

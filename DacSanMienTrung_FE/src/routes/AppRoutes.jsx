@@ -6,6 +6,7 @@ import ProtectedRoute from '../components/auth/ProtectedRoute'
 import LoginPage from '../pages/auth/LoginPage'
 import RegisterPage from '../pages/auth/RegisterPage'
 import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage'
+import UnauthorizedPage from '../pages/auth/UnauthorizedPage'
 import HomePage from '../pages/customer/HomePage'
 import CategoryOverviewPage from '../pages/customer/CategoryOverviewPage'
 import CategoryProductPage from '../pages/customer/CategoryProductPage'
@@ -33,6 +34,10 @@ import AccountManagementPage from '../pages/admin/AccountManagementPage'
 import VoucherManagementPage from '../pages/admin/VoucherManagementPage'
 import ReportPage from '../pages/admin/ReportPage'
 
+const customerRoles = ['khachhang', 'nhanvien', 'quantrivien']
+const staffRoles = ['nhanvien', 'quantrivien']
+const adminRoles = ['quantrivien']
+
 function AppRoutes() {
   return (
     <BrowserRouter>
@@ -46,7 +51,7 @@ function AppRoutes() {
           <Route
             path="/cart"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={customerRoles}>
                 <CartPage />
               </ProtectedRoute>
             }
@@ -54,7 +59,7 @@ function AppRoutes() {
           <Route
             path="/checkout"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={customerRoles}>
                 <CheckoutInfoPage />
               </ProtectedRoute>
             }
@@ -62,7 +67,7 @@ function AppRoutes() {
           <Route
             path="/payment"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={customerRoles}>
                 <PaymentPage />
               </ProtectedRoute>
             }
@@ -70,7 +75,7 @@ function AppRoutes() {
           <Route
             path="/order-success"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={customerRoles}>
                 <OrderSuccessPage />
               </ProtectedRoute>
             }
@@ -78,7 +83,7 @@ function AppRoutes() {
           <Route
             path="/orders"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={customerRoles}>
                 <Navigate to="/profile" replace />
               </ProtectedRoute>
             }
@@ -86,7 +91,7 @@ function AppRoutes() {
           <Route
             path="/orders/:id"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={customerRoles}>
                 <OrderDetailPage />
               </ProtectedRoute>
             }
@@ -97,7 +102,7 @@ function AppRoutes() {
           <Route
             path="/profile"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={customerRoles}>
                 <ProfilePage />
               </ProtectedRoute>
             }
@@ -105,7 +110,15 @@ function AppRoutes() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/staff" element={<StaffLayout />}>
+          <Route path="/unauthorized" element={<UnauthorizedPage />} />
+          <Route
+            path="/staff"
+            element={
+              <ProtectedRoute allowedRoles={staffRoles}>
+                <StaffLayout />
+              </ProtectedRoute>
+            }
+          >
             <Route index element={<Navigate to="/staff/dashboard" replace />} />
             <Route path="dashboard" element={<StaffDashboardPage />} />
             <Route path="products" element={<ProductManagementPage />} />
@@ -116,7 +129,14 @@ function AppRoutes() {
             <Route path="reviews" element={<ReviewManagementPage />} />
             <Route path="blogs" element={<BlogManagementPage />} />
           </Route>
-          <Route path="/admin" element={<AdminLayout />}>
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={adminRoles}>
+                <AdminLayout />
+              </ProtectedRoute>
+            }
+          >
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="dashboard" element={<AdminDashboardPage />} />
             <Route path="accounts" element={<AccountManagementPage />} />

@@ -140,10 +140,10 @@ function PaymentPage() {
           {paymentMethod === 'chuyenKhoan' && (
             <div className="payment-note">
               <h3>Thông tin chuyển khoản mẫu</h3>
-              <p>Ngân hàng: Vietcombank</p>
+              <p>Ngân hàng: Demo Bank</p>
               <p>Số tài khoản: 0123456789</p>
               <p>Chủ tài khoản: DAC SAN MIEN TRUNG</p>
-              <p>Nội dung: Số điện thoại của bạn</p>
+              <p>Nội dung chuyển khoản sẽ hiển thị sau khi tạo đơn.</p>
             </div>
           )}
 
@@ -157,7 +157,7 @@ function PaymentPage() {
           {paymentMethod === 'vi' && (
             <div className="payment-note">
               <h3>Ví điện tử</h3>
-              <p>Cửa hàng sẽ liên hệ gửi thông tin thanh toán sau khi xác nhận đơn.</p>
+              <p>Sau khi tạo đơn, bạn sẽ xác nhận thanh toán ví demo ở trang đặt hàng thành công.</p>
             </div>
           )}
         </div>
