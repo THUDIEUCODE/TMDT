@@ -1,13 +1,17 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { mockPurchasedCombos } from '../../data/mockCombos'
+import { mockOrders } from '../../data/mockOrders'
+import { mockCurrentUser } from '../../data/mockUsers'
+import { getUserById } from '../../services/authService'
 import {
-  getOrderTotal,
-  mockOrders,
+  cancelOrder as cancelOrderApi,
+  getOrdersByUser,
   orderStatusLabels,
   orderStatusOptions,
-} from '../../data/mockOrders'
-import { mockCurrentUser } from '../../data/mockUsers'
+  normalizeOrderStatus,
+} from '../../services/orderService'
+import { getCurrentUser, getCurrentUserId, logout, normalizeUser } from '../../utils/authStorage'
 import './ProfilePage.css'
 
 const accountTabs = [
@@ -19,16 +23,97 @@ const accountTabs = [
   { id: 'combos', label: 'Combo quà tặng' },
 ]
 
-const formatCurrency = (value) => `${value.toLocaleString('vi-VN')}đ`
+const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`
+const normalizeMockUser = (user) => ({
+  ...user,
+  name: user.name || user.hoTen || '',
+  phone: user.phone || user.soDienThoai || '',
+  role: user.role || user.vaiTro || 'khachhang',
+  loyaltyPoints: Number(user.loyaltyPoints || user.diemTichLuy || 0),
+  customerType: user.customerType || user.phanLoaiKhachHang || 'Thân thiết',
+  createdAt: user.createdAt || user.ngayDangKy || '',
+})
+const normalizeMockOrder = (order) => ({
+  ...order,
+  status: normalizeOrderStatus(order.status),
+  total: order.total ?? order.items.reduce((sum, item) => sum + item.price * item.quantity, 0) + order.shippingFee - order.discount,
+})
+const fallbackOrders = mockOrders.map(normalizeMockOrder)
 
 function ProfilePage() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('info')
   const [orderFilter, setOrderFilter] = useState('all')
-  const [orders, setOrders] = useState(mockOrders)
-  const [returnOrder, setReturnOrder] = useState(null)
-  const [returnForm, setReturnForm] = useState({ reason: '', detail: '' })
+  const [orders, setOrders] = useState(fallbackOrders)
+  const [profileUser, setProfileUser] = useState(normalizeMockUser(getCurrentUser() || mockCurrentUser))
+  const [hasUserApiError, setHasUserApiError] = useState(false)
+  const [isOrdersLoading, setIsOrdersLoading] = useState(false)
+  const [hasOrdersApiError, setHasOrdersApiError] = useState(false)
+  const [ordersError, setOrdersError] = useState('')
+  const [cancelTargetOrder, setCancelTargetOrder] = useState(null)
+  const [cancelReason, setCancelReason] = useState('')
   const [selectedCombo, setSelectedCombo] = useState(null)
+
+  const loadOrders = useCallback(async (status = orderFilter) => {
+    const maNguoiDung = getCurrentUserId()
+
+    if (!maNguoiDung) {
+      navigate('/login?redirect=/profile')
+      return
+    }
+
+    setIsOrdersLoading(true)
+    setOrdersError('')
+
+    try {
+      const apiOrders = await getOrdersByUser(maNguoiDung, status === 'all' ? undefined : status)
+      setOrders(apiOrders)
+      setHasOrdersApiError(false)
+    } catch {
+      setOrders(fallbackOrders)
+      setHasOrdersApiError(true)
+    } finally {
+      setIsOrdersLoading(false)
+    }
+  }, [navigate, orderFilter])
+
+  useEffect(() => {
+    const loadTimer = window.setTimeout(async () => {
+      try {
+        const maNguoiDung = getCurrentUserId()
+
+        if (!maNguoiDung) {
+          navigate('/login?redirect=/profile')
+          return
+        }
+
+        const apiUser = await getUserById(maNguoiDung)
+        setProfileUser(normalizeUser(apiUser))
+        setHasUserApiError(false)
+      } catch {
+        setProfileUser(normalizeMockUser(getCurrentUser() || mockCurrentUser))
+        setHasUserApiError(true)
+      }
+    }, 0)
+
+    return () => {
+      window.clearTimeout(loadTimer)
+    }
+  }, [navigate])
+
+  useEffect(() => {
+    if (activeTab !== 'orders') {
+      return undefined
+    }
+
+    const loadTimer = window.setTimeout(() => {
+      loadOrders()
+    }, 0)
+
+    return () => {
+      window.clearTimeout(loadTimer)
+    }
+  }, [activeTab, loadOrders])
 
   const filteredOrders = useMemo(() => {
     if (orderFilter === 'all') {
@@ -37,34 +122,39 @@ function ProfilePage() {
     return orders.filter((order) => order.status === orderFilter)
   }, [orderFilter, orders])
 
-  const cancelOrder = (orderId) => {
-    const confirmed = window.confirm('Bạn có chắc muốn hủy đơn hàng này?')
-    if (!confirmed) {
-      return
-    }
+  const changeOrderFilter = (status) => {
+    setOrderFilter(status)
 
-    setOrders((currentOrders) =>
-      currentOrders.map((order) =>
-        order.id === orderId ? { ...order, status: 'cancelled' } : order,
-      ),
-    )
+    if (!hasOrdersApiError) {
+      loadOrders(status)
+    }
   }
 
-  const submitReturnRequest = (event) => {
+  const submitCancelOrder = async (event) => {
     event.preventDefault()
-    if (!returnOrder) {
+
+    if (!cancelTargetOrder) {
       return
     }
 
-    setOrders((currentOrders) =>
-      currentOrders.map((order) =>
-        order.id === returnOrder.id ? { ...order, status: 'returning' } : order,
-      ),
-    )
-    setReturnOrder(null)
-    setReturnForm({ reason: '', detail: '' })
-    setOrderFilter('returning')
-    setActiveTab('orders')
+    if (!cancelReason.trim()) {
+      setOrdersError('Vui lòng nhập lý do hủy đơn.')
+      return
+    }
+
+    try {
+      await cancelOrderApi(cancelTargetOrder.id, { lyDoHuy: cancelReason.trim() })
+      setCancelTargetOrder(null)
+      setCancelReason('')
+      await loadOrders()
+    } catch (error) {
+      setOrdersError(error?.message || 'Không thể hủy đơn hàng.')
+    }
+  }
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
   }
 
   const renderInfo = () => (
@@ -77,29 +167,42 @@ function ProfilePage() {
       <div className="profile-info-grid">
         <div>
           <span>Họ và tên</span>
-          <strong>{mockCurrentUser.name}</strong>
+          <strong>{profileUser.name || 'Khách hàng demo'}</strong>
         </div>
         <div>
           <span>Email</span>
-          <strong>{mockCurrentUser.email}</strong>
+          <strong>{profileUser.email || 'Đang cập nhật'}</strong>
         </div>
         <div>
           <span>Số điện thoại</span>
-          <strong>{mockCurrentUser.phone}</strong>
+          <strong>{profileUser.phone || 'Đang cập nhật'}</strong>
         </div>
         <div>
           <span>Ngày sinh</span>
-          <strong>{mockCurrentUser.birthday}</strong>
+          <strong>{profileUser.birthday || 'Đang cập nhật'}</strong>
         </div>
         <div>
-          <span>Giới tính</span>
-          <strong>{mockCurrentUser.gender}</strong>
+          <span>Vai trò</span>
+          <strong>{profileUser.role || 'khachhang'}</strong>
         </div>
         <div>
-          <span>Hạng thành viên</span>
-          <strong>Thân thiết</strong>
+          <span>Điểm tích lũy</span>
+          <strong>{Number(profileUser.loyaltyPoints || 0).toLocaleString('vi-VN')} điểm</strong>
+        </div>
+        <div>
+          <span>Phân loại khách hàng</span>
+          <strong>{profileUser.customerType || 'Đang cập nhật'}</strong>
+        </div>
+        <div>
+          <span>Ngày đăng ký</span>
+          <strong>{profileUser.createdAt || 'Đang cập nhật'}</strong>
         </div>
       </div>
+      {hasUserApiError ? (
+        <p className="product-result-summary">
+          Không kết nối được backend, đang dùng thông tin tài khoản lưu cục bộ hoặc dữ liệu mẫu.
+        </p>
+      ) : null}
     </section>
   )
 
@@ -118,21 +221,29 @@ function ProfilePage() {
             className={orderFilter === option.value ? 'active' : ''}
             key={option.value}
             type="button"
-            onClick={() => setOrderFilter(option.value)}
+            onClick={() => changeOrderFilter(option.value)}
           >
             {option.label}
           </button>
         ))}
       </div>
 
+      {isOrdersLoading ? <p className="product-result-summary">Đang tải đơn hàng...</p> : null}
+      {hasOrdersApiError ? (
+        <p className="product-result-summary">
+          Không kết nối được backend, đang dùng dữ liệu mẫu.
+        </p>
+      ) : null}
+      {ordersError ? <p className="form-error">{ordersError}</p> : null}
+
       <div className="profile-order-list">
         {filteredOrders.map((order) => {
-          const firstItem = order.items[0]
+          const firstItem = order.items[0] || {}
           const otherItemCount = Math.max(order.items.length - 1, 0)
 
           return (
             <article className="profile-order-card" key={order.id}>
-              <div className="order-product-symbol">{firstItem.image}</div>
+              <div className="order-product-symbol">{firstItem.image || 'DH'}</div>
 
               <div className="profile-order-main">
                 <div className="profile-order-title">
@@ -141,16 +252,18 @@ function ProfilePage() {
                     <strong>{order.id}</strong>
                   </div>
                   <span className={`status-badge status-${order.status}`}>
-                    {orderStatusLabels[order.status]}
+                    {orderStatusLabels[order.status] || order.status}
                   </span>
                 </div>
                 <p>
-                  {firstItem.name}
+                  {firstItem.name || 'Đơn hàng'}
                   {otherItemCount > 0 ? ` và ${otherItemCount} sản phẩm khác` : ''}
                 </p>
                 <div className="profile-order-meta">
                   <span>Ngày đặt: {order.orderDate}</span>
-                  <span>Tổng tiền: {formatCurrency(getOrderTotal(order))}</span>
+                  <span>Tổng tiền: {formatCurrency(order.total)}</span>
+                  <span>Thanh toán: {order.paymentMethod}</span>
+                  <span>{order.items.length} sản phẩm</span>
                 </div>
               </div>
 
@@ -158,23 +271,26 @@ function ProfilePage() {
                 <Link className="button secondary" to={`/orders/${order.id}`}>
                   Xem chi tiết
                 </Link>
-                {order.status === 'pending' ? (
-                  <button type="button" onClick={() => cancelOrder(order.id)}>
+                {order.status === 'choXacNhan' ? (
+                  <button type="button" onClick={() => setCancelTargetOrder(order)}>
                     Hủy đơn
                   </button>
                 ) : null}
-                {order.status === 'completed' ? (
-                  <>
-                    <button type="button">Đánh giá</button>
-                    <button type="button" onClick={() => setReturnOrder(order)}>
-                      Yêu cầu hoàn hàng
-                    </button>
-                  </>
+                {order.status === 'daGiao' ? (
+                  <button type="button" onClick={() => navigate(`/orders/${order.id}`)}>
+                    Yêu cầu hoàn hàng
+                  </button>
                 ) : null}
               </div>
             </article>
           )
         })}
+        {filteredOrders.length === 0 && !isOrdersLoading ? (
+          <section className="empty-products">
+            <h2>Chưa có đơn hàng phù hợp</h2>
+            <p>Hãy thử chọn trạng thái khác hoặc quay lại mua sắm.</p>
+          </section>
+        ) : null}
       </div>
     </section>
   )
@@ -186,9 +302,9 @@ function ProfilePage() {
         <h2>Địa chỉ của tôi</h2>
       </div>
       <div className="address-card">
-        <strong>{mockCurrentUser.name}</strong>
-        <p>{mockCurrentUser.phone}</p>
-        <p>{mockCurrentUser.address}</p>
+        <strong>{profileUser.name || 'Khách hàng demo'}</strong>
+        <p>{profileUser.phone || 'Đang cập nhật'}</p>
+        <p>{profileUser.address || profileUser.diaChi || 'Đang cập nhật'}</p>
         <span>Mặc định</span>
       </div>
     </section>
@@ -200,7 +316,7 @@ function ProfilePage() {
         <span>Ưu đãi thành viên</span>
         <h2>Điểm tích lũy</h2>
       </div>
-      <strong>{mockCurrentUser.loyaltyPoints.toLocaleString('vi-VN')} điểm</strong>
+      <strong>{Number(profileUser.loyaltyPoints || 0).toLocaleString('vi-VN')} điểm</strong>
       <p>Dùng điểm để đổi voucher giảm giá cho các đơn đặc sản tiếp theo.</p>
     </section>
   )
@@ -267,10 +383,10 @@ function ProfilePage() {
     <div className="profile-page">
       <aside className="profile-sidebar">
         <div className="profile-user">
-          <span>{mockCurrentUser.name.charAt(0)}</span>
+          <span>{(profileUser.name || profileUser.email || 'U').charAt(0)}</span>
           <div>
-            <strong>{mockCurrentUser.name}</strong>
-            <small>{mockCurrentUser.email}</small>
+            <strong>{profileUser.name || 'Khách hàng demo'}</strong>
+            <small>{profileUser.email || 'Chưa đăng nhập'}</small>
           </div>
         </div>
 
@@ -285,7 +401,7 @@ function ProfilePage() {
               {tab.label}
             </button>
           ))}
-          <button type="button" onClick={() => navigate('/login')}>
+          <button type="button" onClick={handleLogout}>
             Đăng xuất
           </button>
         </nav>
@@ -293,42 +409,28 @@ function ProfilePage() {
 
       <main className="profile-content">{tabContent[activeTab]()}</main>
 
-      {returnOrder ? (
+      {cancelTargetOrder ? (
         <div className="profile-modal-backdrop" role="presentation">
-          <form className="profile-modal" onSubmit={submitReturnRequest}>
+          <form className="profile-modal" onSubmit={submitCancelOrder}>
             <div className="profile-panel-heading">
-              <span>Yêu cầu hoàn hàng</span>
-              <h2>{returnOrder.id}</h2>
+              <span>Hủy đơn hàng</span>
+              <h2>{cancelTargetOrder.id}</h2>
             </div>
             <label>
-              Lý do hoàn hàng
+              Lý do hủy
               <input
                 required
-                value={returnForm.reason}
-                onChange={(event) =>
-                  setReturnForm((current) => ({ ...current, reason: event.target.value }))
-                }
-                placeholder="Ví dụ: sản phẩm không đúng quy cách"
-              />
-            </label>
-            <label>
-              Mô tả chi tiết
-              <textarea
-                required
-                rows="4"
-                value={returnForm.detail}
-                onChange={(event) =>
-                  setReturnForm((current) => ({ ...current, detail: event.target.value }))
-                }
-                placeholder="Mô tả tình trạng sản phẩm hoặc mong muốn hỗ trợ"
+                value={cancelReason}
+                onChange={(event) => setCancelReason(event.target.value)}
+                placeholder="Ví dụ: Tôi muốn thay đổi địa chỉ giao hàng"
               />
             </label>
             <div className="modal-actions">
-              <button type="button" onClick={() => setReturnOrder(null)}>
+              <button type="button" onClick={() => setCancelTargetOrder(null)}>
                 Đóng
               </button>
               <button className="button" type="submit">
-                Gửi yêu cầu
+                Xác nhận hủy
               </button>
             </div>
           </form>

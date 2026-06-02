@@ -1,32 +1,81 @@
-import { useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { mockCartItems, mockCartVoucher } from '../../data/mockCart'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { mockCartItems } from '../../data/mockCart'
+import { getCart, mapCartItemFromApi } from '../../services/cartService'
+import { applyVoucher } from '../../services/voucherService'
+import { getCurrentUserId } from '../../utils/authStorage'
 
+const checkoutStorageKey = 'checkoutData'
 const shippingMethods = {
   standard: { label: 'Giao hàng tiêu chuẩn', fee: 25000, description: 'Nhận hàng trong 3-5 ngày.' },
   express: { label: 'Giao hàng nhanh', fee: 45000, description: 'Nhận hàng trong 1-2 ngày.' },
 }
+const fallbackCartItems = mockCartItems.map(mapCartItemFromApi)
+const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`
+
+const getVoucherDiscount = (payload) => {
+  const voucher = payload?.data ?? payload ?? {}
+
+  return {
+    maVoucher: voucher.maVoucher ?? voucher.id ?? voucher.voucherId ?? null,
+    tienGiam: Number(voucher.tienGiam ?? voucher.discountAmount ?? voucher.soTienGiam ?? 0),
+    message: voucher.message ?? 'Đã áp dụng voucher.',
+  }
+}
 
 function CheckoutInfoPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const [items, setItems] = useState(fallbackCartItems)
   const [shippingMethod, setShippingMethod] = useState('standard')
   const [errors, setErrors] = useState({})
+  const [isLoading, setIsLoading] = useState(true)
+  const [hasApiError, setHasApiError] = useState(false)
+  const [voucherCode, setVoucherCode] = useState('')
+  const [voucherMessage, setVoucherMessage] = useState('')
+  const [voucherError, setVoucherError] = useState('')
+  const [appliedVoucher, setAppliedVoucher] = useState({ maVoucher: null, tienGiam: 0 })
   const [formData, setFormData] = useState({
-    fullName: 'Nguyễn Minh Anh',
-    phone: '0901234567',
-    email: 'minhanh@example.com',
-    province: 'Đà Nẵng',
-    district: 'Hải Châu',
-    address: '128 Trần Phú',
-    note: 'Giao giờ hành chính giúp tôi.',
+    hoTenNguoiNhan: '',
+    soDienThoaiNguoiNhan: '',
+    diaChiGiaoHang: '',
+    quanHuyen: '',
+    tinhThanhGiaoHang: '',
+    ghiChuGiaoHang: '',
   })
 
+  useEffect(() => {
+    const loadTimer = window.setTimeout(async () => {
+      const maNguoiDung = getCurrentUserId()
+
+      if (!maNguoiDung) {
+        navigate(`/login?redirect=${encodeURIComponent(`${location.pathname}${location.search}`)}`)
+        return
+      }
+
+      try {
+        const apiItems = await getCart(maNguoiDung)
+        setItems(apiItems)
+        setHasApiError(false)
+      } catch {
+        setItems(fallbackCartItems)
+        setHasApiError(true)
+      } finally {
+        setIsLoading(false)
+      }
+    }, 0)
+
+    return () => {
+      window.clearTimeout(loadTimer)
+    }
+  }, [location.pathname, location.search, navigate])
+
   const subtotal = useMemo(() => {
-    return mockCartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  }, [])
+    return items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  }, [items])
 
   const shippingFee = shippingMethods[shippingMethod].fee
-  const discount = mockCartVoucher.discountAmount
+  const discount = appliedVoucher.tienGiam || 0
   const total = Math.max(subtotal - discount + shippingFee, 0)
 
   const updateField = (field, value) => {
@@ -37,28 +86,88 @@ function CheckoutInfoPage() {
   const validateForm = () => {
     const nextErrors = {}
 
-    if (!formData.fullName.trim()) {
-      nextErrors.fullName = 'Vui lòng nhập họ tên người nhận.'
+    if (!formData.hoTenNguoiNhan.trim()) {
+      nextErrors.hoTenNguoiNhan = 'Vui lòng nhập họ tên người nhận.'
     }
 
-    if (!formData.phone.trim()) {
-      nextErrors.phone = 'Vui lòng nhập số điện thoại.'
+    if (!formData.soDienThoaiNguoiNhan.trim()) {
+      nextErrors.soDienThoaiNguoiNhan = 'Vui lòng nhập số điện thoại.'
     }
 
-    if (!formData.address.trim()) {
-      nextErrors.address = 'Vui lòng nhập địa chỉ chi tiết.'
+    if (!formData.diaChiGiaoHang.trim()) {
+      nextErrors.diaChiGiaoHang = 'Vui lòng nhập địa chỉ giao hàng.'
+    }
+
+    if (!formData.tinhThanhGiaoHang.trim()) {
+      nextErrors.tinhThanhGiaoHang = 'Vui lòng nhập tỉnh/thành.'
     }
 
     setErrors(nextErrors)
     return Object.keys(nextErrors).length === 0
   }
 
+  const handleApplyVoucher = async () => {
+    const maCode = voucherCode.trim()
+    setVoucherError('')
+    setVoucherMessage('')
+
+    if (!maCode) {
+      setVoucherError('Vui lòng nhập mã voucher.')
+      return
+    }
+
+    try {
+      const payload = await applyVoucher({ maCode, tongTienHang: subtotal })
+      const voucher = getVoucherDiscount(payload)
+      setAppliedVoucher(voucher)
+      setVoucherMessage(voucher.message)
+    } catch (error) {
+      setAppliedVoucher({ maVoucher: null, tienGiam: 0 })
+      setVoucherError(error?.message || 'Voucher không hợp lệ hoặc chưa thể áp dụng.')
+    }
+  }
+
   const submitCheckout = (event) => {
     event.preventDefault()
 
-    if (validateForm()) {
-      navigate('/payment')
+    const maNguoiDung = getCurrentUserId()
+
+    if (!maNguoiDung) {
+      navigate(`/login?redirect=${encodeURIComponent(`${location.pathname}${location.search}`)}`)
+      return
     }
+
+    if (!validateForm()) {
+      return
+    }
+
+    const checkoutData = {
+      maNguoiDung,
+      ...formData,
+      maVoucher: appliedVoucher.maVoucher,
+      tienGiam: discount,
+      phiVanChuyen: shippingFee,
+      tongTienHang: subtotal,
+      tongThanhToan: total,
+      items,
+    }
+
+    localStorage.setItem(checkoutStorageKey, JSON.stringify(checkoutData))
+    navigate('/payment', { state: { checkoutData } })
+  }
+
+  if (!isLoading && items.length === 0) {
+    return (
+      <div className="checkout-page">
+        <section className="empty-products">
+          <h2>Giỏ hàng của bạn đang trống.</h2>
+          <p>Vui lòng quay lại giỏ hàng trước khi tiến hành đặt hàng.</p>
+          <Link className="button" to="/cart">
+            Quay lại giỏ hàng
+          </Link>
+        </section>
+      </div>
+    )
   }
 
   return (
@@ -77,6 +186,13 @@ function CheckoutInfoPage() {
         <p>Nhập thông tin người nhận để cửa hàng chuẩn bị đơn đặc sản miền Trung cho bạn.</p>
       </section>
 
+      {isLoading ? <p className="product-result-summary">Đang tải giỏ hàng...</p> : null}
+      {hasApiError ? (
+        <p className="product-result-summary">
+          Không kết nối được backend, đang dùng dữ liệu mẫu.
+        </p>
+      ) : null}
+
       <form className="checkout-layout" onSubmit={submitCheckout}>
         <div className="checkout-form-panel">
           <h2>Người nhận</h2>
@@ -84,61 +200,53 @@ function CheckoutInfoPage() {
             <label>
               Họ tên người nhận
               <input
-                value={formData.fullName}
-                onChange={(event) => updateField('fullName', event.target.value)}
+                value={formData.hoTenNguoiNhan}
+                onChange={(event) => updateField('hoTenNguoiNhan', event.target.value)}
                 placeholder="Nhập họ tên"
               />
-              {errors.fullName && <small>{errors.fullName}</small>}
+              {errors.hoTenNguoiNhan && <small>{errors.hoTenNguoiNhan}</small>}
             </label>
             <label>
               Số điện thoại
               <input
-                value={formData.phone}
-                onChange={(event) => updateField('phone', event.target.value)}
+                value={formData.soDienThoaiNguoiNhan}
+                onChange={(event) => updateField('soDienThoaiNguoiNhan', event.target.value)}
                 placeholder="0900000000"
               />
-              {errors.phone && <small>{errors.phone}</small>}
-            </label>
-            <label>
-              Email
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(event) => updateField('email', event.target.value)}
-                placeholder="email@example.com"
-              />
+              {errors.soDienThoaiNguoiNhan && <small>{errors.soDienThoaiNguoiNhan}</small>}
             </label>
             <label>
               Tỉnh/thành
               <input
-                value={formData.province}
-                onChange={(event) => updateField('province', event.target.value)}
+                value={formData.tinhThanhGiaoHang}
+                onChange={(event) => updateField('tinhThanhGiaoHang', event.target.value)}
                 placeholder="Đà Nẵng"
               />
+              {errors.tinhThanhGiaoHang && <small>{errors.tinhThanhGiaoHang}</small>}
             </label>
             <label>
               Quận/huyện
               <input
-                value={formData.district}
-                onChange={(event) => updateField('district', event.target.value)}
+                value={formData.quanHuyen}
+                onChange={(event) => updateField('quanHuyen', event.target.value)}
                 placeholder="Hải Châu"
               />
             </label>
             <label className="checkout-full">
-              Địa chỉ chi tiết
+              Địa chỉ giao hàng
               <input
-                value={formData.address}
-                onChange={(event) => updateField('address', event.target.value)}
+                value={formData.diaChiGiaoHang}
+                onChange={(event) => updateField('diaChiGiaoHang', event.target.value)}
                 placeholder="Số nhà, tên đường, phường/xã"
               />
-              {errors.address && <small>{errors.address}</small>}
+              {errors.diaChiGiaoHang && <small>{errors.diaChiGiaoHang}</small>}
             </label>
             <label className="checkout-full">
               Ghi chú giao hàng
               <textarea
                 rows="4"
-                value={formData.note}
-                onChange={(event) => updateField('note', event.target.value)}
+                value={formData.ghiChuGiaoHang}
+                onChange={(event) => updateField('ghiChuGiaoHang', event.target.value)}
                 placeholder="Ghi chú thêm cho người giao hàng"
               />
             </label>
@@ -158,7 +266,7 @@ function CheckoutInfoPage() {
                   <strong>{method.label}</strong>
                   <small>{method.description}</small>
                 </span>
-                <b>{method.fee.toLocaleString('vi-VN')}đ</b>
+                <b>{formatCurrency(method.fee)}</b>
               </label>
             ))}
           </div>
@@ -167,33 +275,51 @@ function CheckoutInfoPage() {
         <aside className="checkout-summary">
           <h2>Tóm tắt đơn hàng</h2>
           <div className="checkout-mini-items">
-            {mockCartItems.map((item) => (
+            {items.map((item) => (
               <div key={item.id}>
                 <span>{item.image}</span>
                 <p>
                   <strong>{item.name}</strong>
-                  <small>{item.variantLabel} x {item.quantity}</small>
+                  <small>{item.variantName || item.variantLabel} x {item.quantity}</small>
                 </p>
-                <b>{(item.price * item.quantity).toLocaleString('vi-VN')}đ</b>
+                <b>{formatCurrency(item.price * item.quantity)}</b>
               </div>
             ))}
           </div>
+
+          <div className="voucher-box">
+            <label htmlFor="checkout-voucher">Mã voucher</label>
+            <div>
+              <input
+                id="checkout-voucher"
+                value={voucherCode}
+                onChange={(event) => setVoucherCode(event.target.value)}
+                placeholder="WELCOME10"
+              />
+              <button type="button" onClick={handleApplyVoucher}>
+                Áp dụng
+              </button>
+            </div>
+            {voucherMessage ? <p>{voucherMessage}</p> : null}
+            {voucherError ? <p className="voucher-warning">{voucherError}</p> : null}
+          </div>
+
           <div className="summary-lines">
             <div>
               <span>Tổng tiền hàng</span>
-              <strong>{subtotal.toLocaleString('vi-VN')}đ</strong>
+              <strong>{formatCurrency(subtotal)}</strong>
             </div>
             <div>
               <span>Giảm giá</span>
-              <strong>-{discount.toLocaleString('vi-VN')}đ</strong>
+              <strong>-{formatCurrency(discount)}</strong>
             </div>
             <div>
               <span>Phí vận chuyển</span>
-              <strong>{shippingFee.toLocaleString('vi-VN')}đ</strong>
+              <strong>{formatCurrency(shippingFee)}</strong>
             </div>
             <div className="summary-total">
               <span>Tổng thanh toán</span>
-              <strong>{total.toLocaleString('vi-VN')}đ</strong>
+              <strong>{formatCurrency(total)}</strong>
             </div>
           </div>
           <button className="button checkout-submit" type="submit">

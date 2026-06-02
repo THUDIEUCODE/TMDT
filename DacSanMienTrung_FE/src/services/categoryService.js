@@ -27,25 +27,37 @@ const createInitials = (value) =>
 
 export const mapCategoryFromApi = (apiCategory = {}) => {
   const id = apiCategory.maDanhMuc ?? apiCategory.id
+  const parentId = apiCategory.maDanhMucCha ?? apiCategory.parentId ?? null
   const name = apiCategory.tenDanhMuc ?? apiCategory.name ?? 'Danh mục'
 
   return {
     ...apiCategory,
     id: String(id ?? name),
-    parentId: apiCategory.maDanhMucCha ?? apiCategory.parentId ?? null,
+    parentId: parentId === null || parentId === undefined ? null : String(parentId),
     name,
     slug: String(apiCategory.slug ?? id ?? name),
     description: apiCategory.moTa ?? apiCategory.description ?? '',
     displayOrder: apiCategory.thuTuHienThi ?? apiCategory.displayOrder ?? 0,
     status: apiCategory.trangThai ?? apiCategory.status ?? 'active',
     image: apiCategory.image ?? createInitials(name),
-    productCount: apiCategory.soSanPham ?? apiCategory.productCount ?? 0,
+    productCount: Number(apiCategory.soSanPham ?? apiCategory.productCount ?? 0),
+    childCount: Number(apiCategory.soDanhMucCon ?? apiCategory.childCount ?? 0),
     subCategories: apiCategory.subCategories ?? [],
   }
 }
 
 export const getCategories = async () => {
   const payload = await getApi('/categories')
+  return getArrayPayload(payload).map(mapCategoryFromApi)
+}
+
+export const getRootCategories = async () => {
+  const payload = await getApi('/categories/root')
+  return getArrayPayload(payload).map(mapCategoryFromApi)
+}
+
+export const getChildCategories = async (categoryId) => {
+  const payload = await getApi(`/categories/${categoryId}/children`)
   return getArrayPayload(payload).map(mapCategoryFromApi)
 }
 

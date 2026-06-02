@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import ProductCard from '../../components/product/ProductCard'
 import { mockProducts } from '../../data/mockProducts'
+import { addToCart } from '../../services/cartService'
 import { getProductById, getProductsByCategory } from '../../services/productService'
+import { getCurrentUserId, isLoggedIn } from '../../utils/authStorage'
 
 function ProductDetailPage() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const fallbackProduct = useMemo(
     () => mockProducts.find((item) => item.id === id || item.slug === id),
     [id],
@@ -14,8 +17,11 @@ function ProductDetailPage() {
   const [relatedProducts, setRelatedProducts] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [hasApiError, setHasApiError] = useState(false)
-  const [selectedVariantId, setSelectedVariantId] = useState(fallbackProduct?.variants?.[0]?.id || '')
+  const [selectedVariantId, setSelectedVariantId] = useState('')
   const [quantity, setQuantity] = useState(1)
+  const [cartMessage, setCartMessage] = useState('')
+  const [cartError, setCartError] = useState('')
+  const [isAddingToCart, setIsAddingToCart] = useState(false)
 
   useEffect(() => {
     let isMounted = true
@@ -33,7 +39,7 @@ function ProductDetailPage() {
       try {
         const apiProduct = await getProductById(id)
         const apiRelatedProducts = apiProduct.categoryId
-          ? await getProductsByCategory(apiProduct.categoryId)
+          ? await getProductsByCategory(apiProduct.categoryId).catch(() => [])
           : []
 
         if (!isMounted) {
@@ -41,7 +47,7 @@ function ProductDetailPage() {
         }
 
         setProduct(apiProduct || fallbackProduct)
-        setSelectedVariantId(apiProduct?.variants?.[0]?.id || fallbackProduct?.variants?.[0]?.id || '')
+        setSelectedVariantId('')
         setQuantity(1)
         setRelatedProducts(
           apiRelatedProducts.filter((item) => item.id !== apiProduct.id).slice(0, 4),
@@ -52,7 +58,7 @@ function ProductDetailPage() {
         }
 
         setProduct(fallbackProduct)
-        setSelectedVariantId(fallbackProduct?.variants?.[0]?.id || '')
+        setSelectedVariantId('')
         setQuantity(1)
         setRelatedProducts(fallbackRelatedProducts)
         setHasApiError(true)
@@ -72,6 +78,7 @@ function ProductDetailPage() {
 
   const selectedVariant = product?.variants?.find((variant) => variant.id === selectedVariantId)
   const displayPrice = selectedVariant?.price || product?.price || 0
+  const maxQuantity = selectedVariant?.stock || product?.stock || 1
 
   if (!product) {
     return (
@@ -88,11 +95,76 @@ function ProductDetailPage() {
   }
 
   const increaseQuantity = () => {
-    setQuantity((current) => Math.min(current + 1, selectedVariant?.stock || product.stock))
+    setCartError('')
+    setQuantity((current) => Math.min(current + 1, maxQuantity))
   }
 
   const decreaseQuantity = () => {
+    setCartError('')
     setQuantity((current) => Math.max(current - 1, 1))
+  }
+
+  const changeQuantity = (value) => {
+    const nextQuantity = Number(value)
+
+    if (!Number.isFinite(nextQuantity)) {
+      return
+    }
+
+    setCartError('')
+    setQuantity(Math.min(Math.max(nextQuantity, 1), maxQuantity))
+  }
+
+  const handleAddToCart = async () => {
+    setCartMessage('')
+    setCartError('')
+
+    if (!isLoggedIn()) {
+      setCartError('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.')
+      navigate(`/login?redirect=${encodeURIComponent(`/products/${id}`)}`)
+      return
+    }
+
+    if (!selectedVariant) {
+      setCartError('Vui lòng chọn biến thể sản phẩm.')
+      return
+    }
+
+    if (quantity > maxQuantity) {
+      setCartError('Số lượng vượt quá tồn kho.')
+      return
+    }
+
+    try {
+      setIsAddingToCart(true)
+      const maNguoiDung = getCurrentUserId()
+
+      if (!maNguoiDung) {
+        navigate(`/login?redirect=${encodeURIComponent(`/products/${id}`)}`)
+        return
+      }
+
+      await addToCart({
+        maNguoiDung,
+        maBienThe: selectedVariant.maBienThe,
+        soLuong: quantity,
+      })
+      setCartMessage('Đã thêm sản phẩm vào giỏ hàng')
+    } catch (error) {
+      setCartError(error?.message || 'Không thể thêm sản phẩm vào giỏ hàng.')
+    } finally {
+      setIsAddingToCart(false)
+    }
+  }
+
+  const handleBuyNow = async () => {
+    if (!isLoggedIn()) {
+      setCartError('Vui lòng đăng nhập để mua hàng.')
+      navigate(`/login?redirect=${encodeURIComponent(`/products/${id}`)}`)
+      return
+    }
+
+    navigate('/checkout')
   }
 
   return (
@@ -148,10 +220,13 @@ function ProductDetailPage() {
                   onClick={() => {
                     setSelectedVariantId(variant.id)
                     setQuantity(1)
+                    setCartError('')
+                    setCartMessage('')
                   }}
                 >
                   <strong>{variant.label}</strong>
                   <span>{variant.price.toLocaleString('vi-VN')}đ</span>
+                  <small>Còn {variant.stock} sản phẩm</small>
                 </button>
               ))}
             </div>
@@ -163,20 +238,33 @@ function ProductDetailPage() {
               <button type="button" onClick={decreaseQuantity}>
                 -
               </button>
-              <span>{quantity}</span>
+              <input
+                min="1"
+                max={maxQuantity}
+                type="number"
+                value={quantity}
+                onChange={(event) => changeQuantity(event.target.value)}
+              />
               <button type="button" onClick={increaseQuantity}>
                 +
               </button>
             </div>
           </div>
 
+          {cartError ? <p className="form-error">{cartError}</p> : null}
+          {cartMessage ? (
+            <p className="form-success">
+              {cartMessage}. <Link to="/cart">Xem giỏ hàng</Link>
+            </p>
+          ) : null}
+
           <div className="product-detail-actions">
-            <Link className="button secondary" to="/cart">
-              Thêm vào giỏ
-            </Link>
-            <Link className="button" to="/checkout">
+            <button className="button secondary" type="button" onClick={handleAddToCart} disabled={isAddingToCart}>
+              {isAddingToCart ? 'Đang thêm...' : 'Thêm vào giỏ'}
+            </button>
+            <button className="button" type="button" onClick={handleBuyNow}>
               Mua ngay
-            </Link>
+            </button>
           </div>
         </div>
       </section>

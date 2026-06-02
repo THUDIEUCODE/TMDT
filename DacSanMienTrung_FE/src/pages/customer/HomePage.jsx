@@ -6,7 +6,7 @@ import { mockBlogs } from '../../data/mockBlogs'
 import { mockCategories } from '../../data/mockCategories'
 import { mockCombos } from '../../data/mockCombos'
 import { mockProducts } from '../../data/mockProducts'
-import { getCategories } from '../../services/categoryService'
+import { getRootCategories } from '../../services/categoryService'
 import { getProducts } from '../../services/productService'
 
 const heroSlides = [
@@ -36,10 +36,14 @@ const heroSlides = [
   },
 ]
 
+const isRootCategory = (category) => category.parentId === null || category.parentId === undefined
+const rootMockCategories = mockCategories.filter(isRootCategory)
+const getCategoryPath = (category) => `/categories/${category.id ?? category.slug}`
+
 function HomePage() {
   const [activeSlide, setActiveSlide] = useState(0)
   const [products, setProducts] = useState(mockProducts)
-  const [categories, setCategories] = useState(mockCategories)
+  const [categories, setCategories] = useState(rootMockCategories)
   const [isLoading, setIsLoading] = useState(true)
   const [hasApiError, setHasApiError] = useState(false)
   const bestSellingProducts = products.slice(0, 8)
@@ -51,14 +55,14 @@ function HomePage() {
 
     const loadHomeData = async () => {
       try {
-        const [apiProducts, apiCategories] = await Promise.all([getProducts(), getCategories()])
+        const [apiProducts, apiCategories] = await Promise.all([getProducts(), getRootCategories()])
 
         if (!isMounted) {
           return
         }
 
         setProducts(apiProducts.length > 0 ? apiProducts : mockProducts)
-        setCategories(apiCategories.length > 0 ? apiCategories : mockCategories)
+        setCategories(apiCategories.length > 0 ? apiCategories : rootMockCategories)
         setHasApiError(false)
       } catch {
         if (!isMounted) {
@@ -66,7 +70,7 @@ function HomePage() {
         }
 
         setProducts(mockProducts)
-        setCategories(mockCategories)
+        setCategories(rootMockCategories)
         setHasApiError(true)
       } finally {
         if (isMounted) {
@@ -138,7 +142,7 @@ function HomePage() {
         </div>
         <div className="category-grid">
           {featuredCategories.map((category, index) => (
-            <Link className="category-card" key={category.id} to={`/categories/${category.slug}`}>
+            <Link className="category-card" key={category.id} to={getCategoryPath(category)}>
               <span>{String(index + 1).padStart(2, '0')}</span>
               <strong>{category.name}</strong>
             </Link>

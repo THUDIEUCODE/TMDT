@@ -1,4 +1,4 @@
-import { orderStatusLabels } from '../../data/mockOrders'
+import { orderStatusLabels } from '../../services/orderService'
 import './OrderStatusBadge.css'
 
 function OrderStatusBadge({ status }) {

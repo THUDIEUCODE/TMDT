@@ -47,6 +47,32 @@
   color: rgba(253, 246, 227, 0.88);
 }
 
+.status-choXacNhan,
+.status-daXacNhan {
+  color: #8a4d00;
+  background: #fff2c6;
+}
+
+.status-dangGiao {
+  color: #075985;
+  background: #dff3ff;
+}
+
+.status-daGiao {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.status-daHuy {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.status-dangHoanHang {
+  color: #6c3483;
+  background: #f2e4f8;
+}
+
 .order-detail-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 380px;
@@ -124,7 +150,7 @@
 .order-items-head,
 .order-item-row {
   display: grid;
-  grid-template-columns: minmax(220px, 1.5fr) 1fr 90px 120px 130px;
+  grid-template-columns: minmax(220px, 1.5fr) 1fr 90px 120px 130px 150px;
   gap: 12px;
   align-items: center;
 }
@@ -165,6 +191,33 @@
   color: var(--color-red);
 }
 
+.order-item-actions {
+  display: grid;
+  gap: 6px;
+}
+
+.order-item-actions button {
+  min-height: 34px;
+  padding: 0 12px;
+  color: var(--color-red);
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.order-item-actions p {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
+.order-item-actions small,
+.order-item-actions span {
+  color: var(--color-muted);
+}
+
 .order-detail-bottom {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
@@ -172,7 +225,15 @@
   align-items: start;
 }
 
-.order-detail-bottom > .button {
+.order-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.order-detail-bottom > .button,
+.order-detail-actions .button {
   width: fit-content;
 }
 
@@ -220,6 +281,33 @@
 .order-detail-empty p {
   margin: 0;
   color: var(--color-muted);
+}
+
+.order-action-modal {
+  max-height: min(90vh, 720px);
+  overflow: auto;
+}
+
+.return-item-list {
+  display: grid;
+  gap: 10px;
+}
+
+.return-item-row {
+  grid-template-columns: auto minmax(0, 1fr) auto 90px;
+  align-items: center;
+  padding: 12px;
+  background: #fffaf0;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+
+.return-item-row input[type='checkbox'] {
+  width: auto;
+}
+
+.return-item-row input[type='number'] {
+  min-width: 0;
 }
 
 @media (max-width: 900px) {

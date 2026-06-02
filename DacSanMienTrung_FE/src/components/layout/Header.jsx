@@ -1,15 +1,38 @@
-import { NavLink } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { getCurrentUser, isLoggedIn, logout } from '../../utils/authStorage'
 
 const navItems = [
   { path: '/', label: 'Trang chủ', end: true },
   { path: '/categories', label: 'Danh mục' },
   { path: '/combo-gift', label: 'Combo quà tặng' },
   { path: '/blogs', label: 'Blog' },
-  { path: '/cart', label: 'Giỏ hàng' },
-  { path: '/login', label: 'Đăng nhập' },
 ]
 
 function Header() {
+  const navigate = useNavigate()
+  const [currentUser, setCurrentUser] = useState(getCurrentUser())
+
+  useEffect(() => {
+    const syncAuth = () => {
+      setCurrentUser(getCurrentUser())
+    }
+
+    window.addEventListener('auth-changed', syncAuth)
+    window.addEventListener('storage', syncAuth)
+
+    return () => {
+      window.removeEventListener('auth-changed', syncAuth)
+      window.removeEventListener('storage', syncAuth)
+    }
+  }, [])
+
+  const handleLogout = () => {
+    logout()
+    setCurrentUser(null)
+    navigate('/login')
+  }
+
   return (
     <header className="site-header">
       <div className="header-top">
@@ -35,6 +58,17 @@ function Header() {
               {item.label}
             </NavLink>
           ))}
+          <NavLink to={currentUser ? '/cart' : '/login?redirect=/cart'}>Giỏ hàng</NavLink>
+          {isLoggedIn() && currentUser ? (
+            <>
+              <NavLink to="/profile">{currentUser.name || currentUser.email || 'Tài khoản'}</NavLink>
+              <button className="nav-logout-button" type="button" onClick={handleLogout}>
+                Đăng xuất
+              </button>
+            </>
+          ) : (
+            <NavLink to="/login">Đăng nhập</NavLink>
+          )}
         </nav>
       </div>
     </header>

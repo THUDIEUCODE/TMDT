@@ -115,17 +115,22 @@ textarea {
   gap: 4px;
 }
 
-.main-nav a {
+.main-nav a,
+.nav-logout-button {
   color: #55465b;
   padding: 9px 11px;
+  background: transparent;
+  border: 0;
   border-radius: 999px;
   font-size: 14px;
   font-weight: 600;
+  cursor: pointer;
   transition: background 0.2s ease, color 0.2s ease;
 }
 
 .main-nav a.active,
-.main-nav a:hover {
+.main-nav a:hover,
+.nav-logout-button:hover {
   color: var(--color-red);
   background: var(--color-cream);
 }
@@ -752,6 +757,35 @@ textarea {
   font-weight: 700;
 }
 
+.category-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.back-button {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  color: var(--color-red);
+  background: #fffaf0;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 800;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.back-button:hover {
+  background: var(--color-cream);
+  border-color: var(--color-orange);
+  transform: translateY(-1px);
+}
+
 .breadcrumb {
   display: flex;
   flex-wrap: wrap;
@@ -766,8 +800,17 @@ textarea {
   font-weight: 700;
 }
 
+.breadcrumb a:hover {
+  color: var(--color-purple);
+}
+
+.breadcrumb span {
+  color: #b99669;
+}
+
 .breadcrumb strong {
   color: var(--color-purple);
+  font-weight: 900;
 }
 
 .category-product-layout {
@@ -792,6 +835,45 @@ textarea {
 .category-product-content {
   display: grid;
   gap: 18px;
+}
+
+.child-category-section {
+  display: grid;
+  gap: 16px;
+}
+
+.child-category-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.child-category-chip {
+  min-width: 180px;
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  color: var(--color-purple);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.child-category-chip:hover {
+  border-color: var(--color-orange);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.child-category-chip strong {
+  line-height: 1.35;
+}
+
+.child-category-chip small {
+  color: var(--color-muted);
+  line-height: 1.45;
 }
 
 .product-detail-page {
@@ -982,10 +1064,54 @@ textarea {
   font-weight: 800;
 }
 
+.quantity-control input {
+  width: 100%;
+  min-width: 0;
+  color: var(--color-text);
+  background: #fff;
+  border: 0;
+  text-align: center;
+  font-weight: 800;
+  outline: none;
+}
+
+.quantity-control button:disabled,
+.button:disabled,
+.cart-remove:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .product-detail-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.form-error,
+.form-success {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.form-error {
+  color: var(--color-red);
+  background: #fff1ec;
+  border: 1px solid rgba(184, 65, 45, 0.22);
+}
+
+.form-success {
+  color: var(--color-green);
+  background: #effaf2;
+  border: 1px solid rgba(47, 143, 79, 0.22);
+}
+
+.form-success a {
+  color: var(--color-red);
+  text-decoration: underline;
 }
 
 .product-detail-tabs {
@@ -1083,6 +1209,43 @@ textarea {
 .cart-items {
   display: grid;
   gap: 14px;
+}
+
+.cart-items-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.cart-items-toolbar p {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.cart-items-toolbar strong {
+  color: var(--color-red);
+}
+
+.cart-items-toolbar button {
+  min-height: 34px;
+  padding: 0 12px;
+  color: var(--color-red);
+  background: #fffaf0;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.cart-items-toolbar button:hover {
+  border-color: var(--color-orange);
 }
 
 .cart-item {
@@ -1633,6 +1796,19 @@ textarea {
 
 .success-info-grid strong {
   color: var(--color-purple);
+}
+
+.order-success-items,
+.order-success-summary {
+  width: 100%;
+  text-align: left;
+}
+
+.order-success-summary {
+  padding: 16px;
+  background: #fffaf0;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
 }
 
 .combo-builder-page,

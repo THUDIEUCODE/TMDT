@@ -1,22 +1,86 @@
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { mockCartItems, mockCartVoucher } from '../../data/mockCart'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { createOrder } from '../../services/orderService'
+import { getCurrentUserId } from '../../utils/authStorage'
 
+const checkoutStorageKey = 'checkoutData'
+const latestOrderStorageKey = 'latestOrder'
+const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`
 const paymentMethods = [
-  { id: 'cod', label: 'Thanh toán khi nhận hàng COD' },
-  { id: 'bank', label: 'Chuyển khoản ngân hàng' },
-  { id: 'wallet', label: 'Ví điện tử' },
-  { id: 'card', label: 'Thẻ tín dụng/ghi nợ' },
+  { id: 'COD', label: 'Thanh toán khi nhận hàng COD' },
+  { id: 'chuyenKhoan', label: 'Chuyển khoản ngân hàng' },
+  { id: 'vi', label: 'Ví điện tử' },
 ]
 
+const getStoredCheckout = () => {
+  try {
+    return JSON.parse(localStorage.getItem(checkoutStorageKey))
+  } catch {
+    return null
+  }
+}
+
 function PaymentPage() {
-  const [paymentMethod, setPaymentMethod] = useState('cod')
-  const subtotal = useMemo(() => {
-    return mockCartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  }, [])
-  const shippingFee = 25000
-  const discount = mockCartVoucher.discountAmount
-  const total = Math.max(subtotal - discount + shippingFee, 0)
+  const location = useLocation()
+  const navigate = useNavigate()
+  const checkoutData = useMemo(
+    () => location.state?.checkoutData || getStoredCheckout(),
+    [location.state],
+  )
+  const [paymentMethod, setPaymentMethod] = useState('COD')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [orderError, setOrderError] = useState('')
+
+  useEffect(() => {
+    if (!checkoutData) {
+      navigate('/checkout', { replace: true })
+    }
+  }, [checkoutData, navigate])
+
+  if (!checkoutData) {
+    return null
+  }
+
+  const submitOrder = async () => {
+    setOrderError('')
+
+    try {
+      const maNguoiDung = getCurrentUserId()
+
+      if (!maNguoiDung) {
+        navigate(`/login?redirect=${encodeURIComponent(`${location.pathname}${location.search}`)}`)
+        return
+      }
+
+      setIsSubmitting(true)
+      const order = await createOrder({
+        maNguoiDung,
+        hoTenNguoiNhan: checkoutData.hoTenNguoiNhan,
+        soDienThoaiNguoiNhan: checkoutData.soDienThoaiNguoiNhan,
+        diaChiGiaoHang: checkoutData.diaChiGiaoHang,
+        quanHuyen: checkoutData.quanHuyen,
+        tinhThanhGiaoHang: checkoutData.tinhThanhGiaoHang,
+        ghiChuGiaoHang: checkoutData.ghiChuGiaoHang,
+        phuongThucThanhToan: paymentMethod,
+        maVoucher: checkoutData.maVoucher,
+        phiVanChuyen: checkoutData.phiVanChuyen,
+        ghiChu: checkoutData.ghiChuGiaoHang,
+      })
+
+      localStorage.setItem(latestOrderStorageKey, JSON.stringify(order))
+      localStorage.removeItem(checkoutStorageKey)
+
+      const orderId = order.code || order.id
+      navigate(`/order-success?orderId=${encodeURIComponent(orderId)}`, { state: { order } })
+    } catch (error) {
+      setOrderError(
+        error?.message ||
+          'Không thể tạo đơn hàng vì chưa kết nối được backend.',
+      )
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
     <div className="checkout-page">
@@ -42,15 +106,19 @@ function PaymentPage() {
           <div className="recipient-summary">
             <div>
               <span>Người nhận</span>
-              <strong>Nguyễn Minh Anh</strong>
+              <strong>{checkoutData.hoTenNguoiNhan}</strong>
             </div>
             <div>
               <span>Số điện thoại</span>
-              <strong>0901234567</strong>
+              <strong>{checkoutData.soDienThoaiNguoiNhan}</strong>
             </div>
             <div>
               <span>Địa chỉ</span>
-              <strong>128 Trần Phú, Hải Châu, Đà Nẵng</strong>
+              <strong>
+                {[checkoutData.diaChiGiaoHang, checkoutData.quanHuyen, checkoutData.tinhThanhGiaoHang]
+                  .filter(Boolean)
+                  .join(', ')}
+              </strong>
             </div>
           </div>
 
@@ -69,20 +137,27 @@ function PaymentPage() {
             ))}
           </div>
 
-          {paymentMethod === 'bank' && (
+          {paymentMethod === 'chuyenKhoan' && (
             <div className="payment-note">
               <h3>Thông tin chuyển khoản mẫu</h3>
               <p>Ngân hàng: Vietcombank</p>
               <p>Số tài khoản: 0123456789</p>
               <p>Chủ tài khoản: DAC SAN MIEN TRUNG</p>
-              <p>Nội dung: DH20260529001 - Số điện thoại của bạn</p>
+              <p>Nội dung: Số điện thoại của bạn</p>
             </div>
           )}
 
-          {paymentMethod === 'cod' && (
+          {paymentMethod === 'COD' && (
             <div className="payment-note">
               <h3>Thanh toán khi nhận hàng</h3>
               <p>Bạn sẽ thanh toán trực tiếp cho nhân viên giao hàng sau khi kiểm tra đơn.</p>
+            </div>
+          )}
+
+          {paymentMethod === 'vi' && (
+            <div className="payment-note">
+              <h3>Ví điện tử</h3>
+              <p>Cửa hàng sẽ liên hệ gửi thông tin thanh toán sau khi xác nhận đơn.</p>
             </div>
           )}
         </div>
@@ -90,42 +165,45 @@ function PaymentPage() {
         <aside className="checkout-summary">
           <h2>Tóm tắt đơn hàng</h2>
           <div className="checkout-mini-items">
-            {mockCartItems.map((item) => (
+            {(checkoutData.items || []).map((item) => (
               <div key={item.id}>
                 <span>{item.image}</span>
                 <p>
                   <strong>{item.name}</strong>
-                  <small>{item.variantLabel} x {item.quantity}</small>
+                  <small>{item.variantName || item.variantLabel} x {item.quantity}</small>
                 </p>
-                <b>{(item.price * item.quantity).toLocaleString('vi-VN')}đ</b>
+                <b>{formatCurrency(item.price * item.quantity)}</b>
               </div>
             ))}
           </div>
           <div className="summary-lines">
             <div>
               <span>Tổng tiền hàng</span>
-              <strong>{subtotal.toLocaleString('vi-VN')}đ</strong>
+              <strong>{formatCurrency(checkoutData.tongTienHang)}</strong>
             </div>
             <div>
               <span>Giảm giá</span>
-              <strong>-{discount.toLocaleString('vi-VN')}đ</strong>
+              <strong>-{formatCurrency(checkoutData.tienGiam)}</strong>
             </div>
             <div>
               <span>Phí vận chuyển</span>
-              <strong>{shippingFee.toLocaleString('vi-VN')}đ</strong>
+              <strong>{formatCurrency(checkoutData.phiVanChuyen)}</strong>
             </div>
             <div className="summary-total">
               <span>Tổng thanh toán</span>
-              <strong>{total.toLocaleString('vi-VN')}đ</strong>
+              <strong>{formatCurrency(checkoutData.tongThanhToan)}</strong>
             </div>
           </div>
+
+          {orderError ? <p className="form-error">{orderError}</p> : null}
+
           <div className="payment-actions">
             <Link className="button secondary" to="/checkout">
               Quay lại
             </Link>
-            <Link className="button" to="/order-success">
-              Xác nhận đặt hàng
-            </Link>
+            <button className="button" type="button" onClick={submitOrder} disabled={isSubmitting}>
+              {isSubmitting ? 'Đang đặt hàng...' : 'Đặt hàng'}
+            </button>
           </div>
         </aside>
       </section>

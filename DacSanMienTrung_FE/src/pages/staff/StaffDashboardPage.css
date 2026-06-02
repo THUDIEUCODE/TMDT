@@ -209,7 +209,7 @@
 .staff-table-head,
 .staff-table-row {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 0.8fr 0.9fr 1fr 52px;
+  grid-template-columns: 1fr 1fr 0.9fr 0.9fr 0.9fr 1fr 0.9fr 52px;
   gap: 12px;
   align-items: center;
 }
@@ -241,7 +241,7 @@
 
 .stock-alert-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 54px 100px;
+  grid-template-columns: minmax(0, 1fr) 54px 120px 110px;
   gap: 10px;
   align-items: center;
   padding: 12px;
@@ -280,6 +280,27 @@
   padding: 7px 9px;
   text-align: center;
   font-weight: 900;
+}
+
+.stock-warning-level {
+  margin-top: 0 !important;
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.staff-dashboard-message,
+.staff-empty-state {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.staff-dashboard-message {
+  padding: 12px 14px;
+  background: #fffaf0;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  font-weight: 700;
 }
 
 .staff-task-list {

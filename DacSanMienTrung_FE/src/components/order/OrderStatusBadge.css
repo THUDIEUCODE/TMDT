@@ -6,32 +6,38 @@
   font-weight: 900;
 }
 
-.status-pending {
+.status-pending,
+.status-choXacNhan {
   color: #8a4d00;
   background: #fff2c6;
 }
 
-.status-shipping {
+.status-shipping,
+.status-dangGiao {
   color: #075985;
   background: #dff3ff;
 }
 
-.status-confirmed {
+.status-confirmed,
+.status-daXacNhan {
   color: #4b235d;
   background: #f2e4f8;
 }
 
-.status-completed {
+.status-completed,
+.status-daGiao {
   color: #166534;
   background: #dcfce7;
 }
 
-.status-cancelled {
+.status-cancelled,
+.status-daHuy {
   color: #991b1b;
   background: #fee2e2;
 }
 
-.status-returning {
+.status-returning,
+.status-dangHoanHang {
   color: #6c3483;
   background: #f2e4f8;
 }

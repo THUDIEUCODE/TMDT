@@ -1,6 +1,9 @@
 package com.example.dacsanmientrung_backend.service.impl;
 
 import com.example.dacsanmientrung_backend.dto.request.CancelOrderRequest;
+import com.example.dacsanmientrung_backend.dto.request.ConfirmBankTransferRequest;
+import com.example.dacsanmientrung_backend.dto.request.ConfirmReceivedRequest;
+import com.example.dacsanmientrung_backend.dto.request.ConfirmWalletPaymentRequest;
 import com.example.dacsanmientrung_backend.dto.request.CreateOrderRequest;
 import com.example.dacsanmientrung_backend.dto.response.OrderDetailResponse;
 import com.example.dacsanmientrung_backend.dto.response.OrderItemResponse;
@@ -31,12 +34,27 @@ import java.util.Set;
 public class DonHangServiceImpl implements DonHangService {
 
     private static final String STATUS_CHO_XAC_NHAN = "choXacNhan";
+    private static final String STATUS_DA_XAC_NHAN = "daXacNhan";
+    private static final String STATUS_DANG_GIAO = "dangGiao";
+    private static final String STATUS_KHACH_DA_NHAN = "khachDaNhan";
     private static final String STATUS_DA_GIAO = "daGiao";
     private static final String STATUS_DA_HUY = "daHuy";
+    private static final String STATUS_DANG_HOAN_HANG = "dangHoanHang";
+    private static final String PAYMENT_STATUS_CHO_THANH_TOAN = "choThanhToan";
+    private static final String PAYMENT_STATUS_THANH_CONG = "thanhCong";
     private static final String PAYMENT_COD = "COD";
+    private static final String PAYMENT_CHUYEN_KHOAN = "chuyenKhoan";
+    private static final String PAYMENT_VI = "vi";
     private static final Set<String> VALID_ORDER_STATUSES = Set.of(
-            "choXacNhan", "daXacNhan", "dangGiao", "daGiao", "daHuy", "dangHoanHang"
+            STATUS_CHO_XAC_NHAN,
+            STATUS_DA_XAC_NHAN,
+            STATUS_DANG_GIAO,
+            STATUS_KHACH_DA_NHAN,
+            STATUS_DA_GIAO,
+            STATUS_DA_HUY,
+            STATUS_DANG_HOAN_HANG
     );
+    private static final Set<String> PREPAID_PAYMENT_METHODS = Set.of(PAYMENT_CHUYEN_KHOAN, PAYMENT_VI);
 
     private final DonHangRepository donHangRepository;
     private final ChiTietDonHangRepository chiTietDonHangRepository;
@@ -90,8 +108,9 @@ public class DonHangServiceImpl implements DonHangService {
         donHang.setTienGiam(tienGiam);
         donHang.setPhiVanChuyen(phiVanChuyen);
         donHang.setTongThanhToan(tongThanhToan);
-        donHang.setPhuongThucThanhToan(request.getPhuongThucThanhToan().trim());
-        donHang.setTrangThaiThanhToan("choThanhToan");
+        donHang.setPhuongThucThanhToan(normalizePaymentMethod(request.getPhuongThucThanhToan()));
+        donHang.setTrangThaiThanhToan(PAYMENT_STATUS_CHO_THANH_TOAN);
+        donHang.setNgayThanhToan(null);
         donHang.setTrangThaiHoanHang("khongCo");
         donHang.setNgayDatHang(LocalDateTime.now());
         donHang.setGhiChu(request.getGhiChu());
@@ -173,12 +192,63 @@ public class DonHangServiceImpl implements DonHangService {
         }
 
         DonHang donHang = getOrder(maDonHang);
+        validateOrderStatusTransition(donHang, status);
         donHang.setTrangThaiDonHang(status);
 
-        if (STATUS_DA_GIAO.equals(status) && PAYMENT_COD.equalsIgnoreCase(donHang.getPhuongThucThanhToan())) {
-            donHang.setTrangThaiThanhToan("thanhCong");
+        return toDetailResponse(donHangRepository.save(donHang));
+    }
+
+    @Override
+    @Transactional
+    public OrderDetailResponse confirmReceived(Integer maDonHang, ConfirmReceivedRequest request) {
+        DonHang donHang = getOrder(maDonHang);
+        ensureOrderBelongsToUser(donHang, request != null ? request.getMaNguoiDung() : null);
+        if (!STATUS_DANG_GIAO.equals(donHang.getTrangThaiDonHang())) {
+            throw new BadRequestException("Chỉ có thể xác nhận đã nhận hàng khi đơn đang giao.");
+        }
+
+        donHang.setTrangThaiDonHang(STATUS_KHACH_DA_NHAN);
+        if (PAYMENT_COD.equals(donHang.getPhuongThucThanhToan())) {
+            donHang.setTrangThaiThanhToan(PAYMENT_STATUS_THANH_CONG);
             donHang.setNgayThanhToan(LocalDateTime.now());
         }
+
+        return toDetailResponse(donHangRepository.save(donHang));
+    }
+
+    @Override
+    @Transactional
+    public OrderDetailResponse confirmBankTransfer(Integer maDonHang, ConfirmBankTransferRequest request) {
+        DonHang donHang = getOrder(maDonHang);
+        if (!PAYMENT_CHUYEN_KHOAN.equals(donHang.getPhuongThucThanhToan())) {
+            throw new BadRequestException("Chỉ áp dụng xác nhận chuyển khoản cho đơn hàng thanh toán chuyển khoản.");
+        }
+        if (request == null || request.getMaNhanVienXuLy() == null) {
+            throw new BadRequestException("Mã nhân viên xử lý không được rỗng.");
+        }
+        getUser(request.getMaNhanVienXuLy());
+
+        donHang.setTrangThaiThanhToan(PAYMENT_STATUS_THANH_CONG);
+        donHang.setNgayThanhToan(LocalDateTime.now());
+        donHang.setMaGiaoDich(trimToNull(request.getMaGiaoDich()));
+        donHang.setMaNhanVienXuLy(request.getMaNhanVienXuLy());
+        donHang.setGhiChuXuLy(trimToNull(request.getGhiChuXuLy()));
+
+        return toDetailResponse(donHangRepository.save(donHang));
+    }
+
+    @Override
+    @Transactional
+    public OrderDetailResponse confirmWalletPayment(Integer maDonHang, ConfirmWalletPaymentRequest request) {
+        DonHang donHang = getOrder(maDonHang);
+        if (!PAYMENT_VI.equals(donHang.getPhuongThucThanhToan())) {
+            throw new BadRequestException("Chỉ áp dụng xác nhận thanh toán ví cho đơn hàng thanh toán ví.");
+        }
+        ensureOrderBelongsToUser(donHang, request != null ? request.getMaNguoiDung() : null);
+
+        donHang.setTrangThaiThanhToan(PAYMENT_STATUS_THANH_CONG);
+        donHang.setNgayThanhToan(LocalDateTime.now());
+        donHang.setMaGiaoDich(trimToNull(request.getMaGiaoDich()));
 
         return toDetailResponse(donHangRepository.save(donHang));
     }
@@ -285,6 +355,78 @@ public class DonHangServiceImpl implements DonHangService {
             bienThe.setSoLuongTon(bienThe.getSoLuongTon() + item.getSoLuong());
             bienTheRepository.save(bienThe);
         });
+    }
+
+    private void validateOrderStatusTransition(DonHang donHang, String targetStatus) {
+        String currentStatus = donHang.getTrangThaiDonHang();
+        if (STATUS_DA_HUY.equals(currentStatus)) {
+            throw new BadRequestException("Không thể cập nhật trạng thái đơn hàng đã hủy.");
+        }
+
+        if (STATUS_CHO_XAC_NHAN.equals(currentStatus) && STATUS_DA_XAC_NHAN.equals(targetStatus)) {
+            ensureCanConfirmOrder(donHang);
+            return;
+        }
+
+        if (STATUS_DA_XAC_NHAN.equals(currentStatus) && STATUS_DANG_GIAO.equals(targetStatus)) {
+            return;
+        }
+
+        if (STATUS_DANG_GIAO.equals(currentStatus) && STATUS_DA_GIAO.equals(targetStatus)) {
+            throw new BadRequestException("Khách hàng chưa xác nhận đã nhận hàng.");
+        }
+
+        if (STATUS_KHACH_DA_NHAN.equals(currentStatus) && STATUS_DA_GIAO.equals(targetStatus)) {
+            return;
+        }
+
+        throw new BadRequestException("Không thể chuyển trạng thái đơn hàng từ " + currentStatus + " sang " + targetStatus + ".");
+    }
+
+    private void ensureCanConfirmOrder(DonHang donHang) {
+        if (PAYMENT_COD.equals(donHang.getPhuongThucThanhToan())) {
+            return;
+        }
+
+        if (PREPAID_PAYMENT_METHODS.contains(donHang.getPhuongThucThanhToan())
+                && PAYMENT_STATUS_THANH_CONG.equals(donHang.getTrangThaiThanhToan())) {
+            return;
+        }
+
+        throw new BadRequestException("Đơn hàng chưa thanh toán, không thể xác nhận.");
+    }
+
+    private void ensureOrderBelongsToUser(DonHang donHang, Integer maNguoiDung) {
+        if (maNguoiDung == null) {
+            throw new BadRequestException("Mã người dùng không được rỗng.");
+        }
+        getUser(maNguoiDung);
+        if (!donHang.getNguoiDung().getMaNguoiDung().equals(maNguoiDung)) {
+            throw new BadRequestException("Đơn hàng không thuộc người dùng này.");
+        }
+    }
+
+    private String normalizePaymentMethod(String paymentMethod) {
+        if (paymentMethod == null || paymentMethod.isBlank()) {
+            throw new BadRequestException("Phương thức thanh toán không được rỗng.");
+        }
+
+        String value = paymentMethod.trim();
+        if (PAYMENT_COD.equalsIgnoreCase(value)) {
+            return PAYMENT_COD;
+        }
+        if (PAYMENT_CHUYEN_KHOAN.equals(value) || PAYMENT_VI.equals(value)) {
+            return value;
+        }
+
+        throw new BadRequestException("Phương thức thanh toán không hợp lệ: " + paymentMethod);
+    }
+
+    private String trimToNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 
     private List<ChiTietDonHang> getOrderItems(DonHang donHang) {

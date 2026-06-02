@@ -1,10 +1,70 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import ProductCard from '../../components/product/ProductCard'
 import { mockCategories } from '../../data/mockCategories'
 import { mockProducts } from '../../data/mockProducts'
-import { getCategoryById } from '../../services/categoryService'
-import { getProductsByCategory } from '../../services/productService'
+import { getCategoryById, getChildCategories } from '../../services/categoryService'
+import { getProductsByCategoryTree } from '../../services/productService'
+
+const isNumericId = (value) => /^\d+$/.test(String(value || ''))
+const normalizeId = (value) => String(value ?? '')
+const mockCategoryAliases = [
+  {
+    id: '1',
+    name: 'Bánh Kẹo',
+    slug: '1',
+    description: 'Nhóm đặc sản bánh kẹo miền Trung.',
+    image: 'BK',
+    productCount: 0,
+    parentId: null,
+    subCategories: ['Bánh', 'Kẹo'],
+  },
+  {
+    id: '9',
+    name: 'Bánh',
+    slug: '9',
+    description: 'Các loại bánh đặc sản.',
+    image: 'BA',
+    productCount: 0,
+    parentId: '1',
+    subCategories: [],
+  },
+  {
+    id: '10',
+    name: 'Kẹo',
+    slug: '10',
+    description: 'Các loại kẹo đặc sản.',
+    image: 'KE',
+    productCount: 0,
+    parentId: '1',
+    subCategories: [],
+  },
+]
+const fallbackCategories = [...mockCategories, ...mockCategoryAliases]
+
+function findMockCategory(categorySlug) {
+  return fallbackCategories.find(
+    (item) => normalizeId(item.id) === normalizeId(categorySlug) || item.slug === categorySlug,
+  )
+}
+
+function findMockParentCategory(category) {
+  if (!category?.parentId) {
+    return null
+  }
+
+  return findMockCategory(category.parentId)
+}
+
+function getFallbackProducts(categorySlug, category) {
+  const categoryKeys = new Set(
+    [categorySlug, category?.id, category?.slug].filter((value) => value !== null && value !== undefined).map(normalizeId),
+  )
+
+  return mockProducts.filter(
+    (product) => categoryKeys.has(normalizeId(product.categoryId)) || categoryKeys.has(product.categorySlug),
+  )
+}
 
 function isInPriceRange(product, range) {
   if (range === 'under-100') {
@@ -42,15 +102,18 @@ function sortProducts(products, sortBy) {
 
 function CategoryProductPage() {
   const { categorySlug } = useParams()
-  const isCategoryId = /^\d+$/.test(categorySlug)
-  const fallbackCategory = useMemo(
-    () => mockCategories.find((item) => item.slug === categorySlug || item.id === categorySlug),
-    [categorySlug],
+  const navigate = useNavigate()
+  const isCategoryId = isNumericId(categorySlug)
+  const fallbackCategory = useMemo(() => findMockCategory(categorySlug), [categorySlug])
+  const fallbackParentCategory = useMemo(() => findMockParentCategory(fallbackCategory), [fallbackCategory])
+  const fallbackProducts = useMemo(
+    () => getFallbackProducts(categorySlug, fallbackCategory),
+    [categorySlug, fallbackCategory],
   )
   const [category, setCategory] = useState(fallbackCategory)
-  const [categoryProducts, setCategoryProducts] = useState(() =>
-    mockProducts.filter((product) => product.categorySlug === categorySlug),
-  )
+  const [parentCategory, setParentCategory] = useState(fallbackParentCategory)
+  const [childCategories, setChildCategories] = useState([])
+  const [categoryProducts, setCategoryProducts] = useState(fallbackProducts)
   const [isLoading, setIsLoading] = useState(isCategoryId)
   const [hasApiError, setHasApiError] = useState(false)
   const [searchText, setSearchText] = useState('')
@@ -63,23 +126,27 @@ function CategoryProductPage() {
   useEffect(() => {
     let isMounted = true
 
-    const fallbackProducts = mockProducts.filter((product) => product.categorySlug === categorySlug)
-
     const loadCategoryProducts = async () => {
       setIsLoading(true)
       setHasApiError(false)
+      setSelectedSubCategory('all')
 
       if (!isCategoryId) {
         setCategory(fallbackCategory)
+        setParentCategory(fallbackParentCategory)
+        setChildCategories([])
         setCategoryProducts(fallbackProducts)
         setIsLoading(false)
         return
       }
 
       try {
-        const [apiCategory, apiProducts] = await Promise.all([
-          getCategoryById(categorySlug),
-          getProductsByCategory(categorySlug),
+        const apiCategory = await getCategoryById(categorySlug)
+        const currentParentId = apiCategory?.parentId ?? fallbackCategory?.parentId
+        const [apiParentCategory, apiChildCategories, apiProducts] = await Promise.all([
+          currentParentId ? getCategoryById(currentParentId).catch(() => findMockCategory(currentParentId)) : null,
+          getChildCategories(categorySlug),
+          getProductsByCategoryTree(categorySlug),
         ])
 
         if (!isMounted) {
@@ -87,13 +154,28 @@ function CategoryProductPage() {
         }
 
         setCategory(apiCategory || fallbackCategory)
-        setCategoryProducts(apiProducts.length > 0 ? apiProducts : fallbackProducts)
+        setParentCategory(apiParentCategory || fallbackParentCategory)
+        setChildCategories(apiChildCategories)
+        setCategoryProducts(apiProducts)
       } catch {
         if (!isMounted) {
           return
         }
 
-        setCategory(fallbackCategory)
+        const fallbackCurrentCategory =
+          fallbackCategory || {
+            id: categorySlug,
+            slug: categorySlug,
+            name: `Danh mục ${categorySlug}`,
+            description: '',
+            productCount: fallbackProducts.length,
+            parentId: null,
+            subCategories: [],
+          }
+
+        setCategory(fallbackCurrentCategory)
+        setParentCategory(findMockParentCategory(fallbackCurrentCategory))
+        setChildCategories([])
         setCategoryProducts(fallbackProducts)
         setHasApiError(true)
       } finally {
@@ -108,7 +190,7 @@ function CategoryProductPage() {
     return () => {
       isMounted = false
     }
-  }, [categorySlug, fallbackCategory, isCategoryId])
+  }, [categorySlug, fallbackCategory, fallbackParentCategory, fallbackProducts, isCategoryId])
 
   const provinces = useMemo(() => {
     return [...new Set(categoryProducts.map((product) => product.province).filter(Boolean))].sort()
@@ -118,6 +200,18 @@ function CategoryProductPage() {
     return [...new Set(categoryProducts.map((product) => product.subCategory).filter(Boolean))].sort()
   }, [categoryProducts])
 
+  const subCategoryOptions = useMemo(() => {
+    const childOptions = childCategories.map((child) => ({
+      id: normalizeId(child.id),
+      name: child.name,
+    }))
+    const typeOptions = productTypes
+      .filter((type) => !childOptions.some((child) => child.name === type))
+      .map((type) => ({ id: type, name: type }))
+
+    return [...childOptions, ...typeOptions]
+  }, [childCategories, productTypes])
+
   const filteredProducts = useMemo(() => {
     const keyword = searchText.trim().toLowerCase()
     const products = categoryProducts.filter((product) => {
@@ -125,7 +219,10 @@ function CategoryProductPage() {
         product.name.toLowerCase().includes(keyword) ||
         (product.province || '').toLowerCase().includes(keyword)
       const matchesSubCategory =
-        selectedSubCategory === 'all' || product.subCategory === selectedSubCategory
+        selectedSubCategory === 'all' ||
+        normalizeId(product.categoryId) === selectedSubCategory ||
+        product.categorySlug === selectedSubCategory ||
+        product.subCategory === selectedSubCategory
       const matchesProvince = selectedProvince === 'all' || product.province === selectedProvince
       const matchesType = selectedType === 'all' || product.subCategory === selectedType
       const matchesPrice = isInPriceRange(product, selectedPrice)
@@ -153,6 +250,15 @@ function CategoryProductPage() {
     setSortBy('newest')
   }
 
+  const goBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1)
+      return
+    }
+
+    navigate('/categories')
+  }
+
   if (!category) {
     return (
       <section className="page-card">
@@ -167,21 +273,52 @@ function CategoryProductPage() {
     )
   }
 
+  const productCount = category.productCount || categoryProducts.length
+  const hasProductsBeforeFilter = categoryProducts.length > 0
+
   return (
     <div className="category-product-page">
-      <nav className="breadcrumb">
-        <Link to="/">Trang chủ</Link>
-        <span>›</span>
-        <Link to="/categories">Danh mục</Link>
-        <span>›</span>
-        <strong>{category.name}</strong>
-      </nav>
+      <div className="category-navigation">
+        <button className="back-button" type="button" onClick={goBack}>
+          ← Quay lại
+        </button>
+        <nav className="breadcrumb" aria-label="Đường dẫn danh mục">
+          <Link to="/">Trang chủ</Link>
+          <span>›</span>
+          <Link to="/categories">Danh mục</Link>
+          <span>›</span>
+          {parentCategory ? (
+            <>
+              <Link to={`/categories/${parentCategory.id}`}>{parentCategory.name}</Link>
+              <span>›</span>
+            </>
+          ) : null}
+          <strong>{category.name}</strong>
+        </nav>
+      </div>
 
       <section className="category-title-panel">
-        <span>{category.productCount || categoryProducts.length} sản phẩm</span>
+        <span>{productCount} sản phẩm</span>
         <h1>{category.name}</h1>
-        <p>{category.description}</p>
+        <p>{category.description || 'Đang cập nhật mô tả danh mục.'}</p>
       </section>
+
+      {childCategories.length > 0 ? (
+        <section className="child-category-section">
+          <div className="section-heading">
+            <span>Danh mục con</span>
+            <h2>Khám phá tiếp</h2>
+          </div>
+          <div className="child-category-list">
+            {childCategories.map((child) => (
+              <Link className="child-category-chip" key={child.id} to={`/categories/${child.id}`}>
+                <strong>{child.name}</strong>
+                {child.description ? <small>{child.description}</small> : null}
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {isLoading ? <p className="product-result-summary">Đang tải dữ liệu...</p> : null}
       {hasApiError ? (
@@ -206,9 +343,9 @@ function CategoryProductPage() {
               onChange={(event) => setSelectedSubCategory(event.target.value)}
             >
               <option value="all">Tất cả</option>
-              {(category.subCategories || []).map((subCategory) => (
-                <option key={subCategory} value={subCategory}>
-                  {subCategory}
+              {subCategoryOptions.map((subCategory) => (
+                <option key={subCategory.id} value={subCategory.id}>
+                  {subCategory.name}
                 </option>
               ))}
             </select>
@@ -282,11 +419,21 @@ function CategoryProductPage() {
             </div>
           ) : (
             <div className="empty-products">
-              <h2>Chưa có sản phẩm phù hợp</h2>
+              <h2>
+                {hasProductsBeforeFilter
+                  ? 'Chưa có sản phẩm phù hợp'
+                  : 'Chưa có sản phẩm trong danh mục này.'}
+              </h2>
               <p>Thử đổi bộ lọc hoặc quay lại trang tổng quan danh mục.</p>
-              <button className="button" type="button" onClick={resetFilters}>
-                Xóa bộ lọc
-              </button>
+              {hasProductsBeforeFilter ? (
+                <button className="button" type="button" onClick={resetFilters}>
+                  Xóa bộ lọc
+                </button>
+              ) : (
+                <Link className="button" to="/categories">
+                  Xem danh mục khác
+                </Link>
+              )}
             </div>
           )}
         </div>

@@ -1,15 +1,34 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { login } from '../../services/authService'
+import { saveAuth } from '../../utils/authStorage'
 import './LoginPage.css'
+
+const getRedirectPath = (role = '') => {
+  const normalizedRole = String(role).toLowerCase()
+
+  if (normalizedRole === 'quantrivien' || normalizedRole === 'admin') {
+    return '/admin/dashboard'
+  }
+
+  if (normalizedRole === 'nhanvien' || normalizedRole === 'staff') {
+    return '/staff/dashboard'
+  }
+
+  return '/profile'
+}
 
 function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
   const [formData, setFormData] = useState({
     account: '',
     password: '',
     remember: true,
   })
-  const [message, setMessage] = useState('')
+  const [message, setMessage] = useState(location.state?.message || '')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleChange = (event) => {
     const { name, value, checked, type } = event.target
@@ -19,16 +38,30 @@ function LoginPage() {
     }))
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
 
     if (!formData.account.trim() || !formData.password.trim()) {
-      setMessage('Vui lòng nhập email hoặc số điện thoại và mật khẩu.')
+      setMessage('Vui lòng nhập email và mật khẩu.')
       return
     }
 
-    setMessage('Đăng nhập thành công. Đang chuyển đến tài khoản cá nhân...')
-    window.setTimeout(() => navigate('/profile'), 450)
+    try {
+      setIsSubmitting(true)
+      setMessage('')
+      const response = await login({
+        email: formData.account.trim(),
+        matKhau: formData.password,
+      })
+      const user = saveAuth(response)
+      const redirectPath = searchParams.get('redirect')
+      setMessage('Đăng nhập thành công.')
+      navigate(redirectPath || getRedirectPath(user.role))
+    } catch (error) {
+      setMessage(error?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -62,7 +95,7 @@ function LoginPage() {
 
         <form className="login-form" onSubmit={handleSubmit}>
           <label>
-            Email hoặc số điện thoại
+            Email
             <input
               name="account"
               value={formData.account}
@@ -97,8 +130,8 @@ function LoginPage() {
 
           {message ? <p className="login-message">{message}</p> : null}
 
-          <button className="button login-submit" type="submit">
-            Đăng nhập
+          <button className="button login-submit" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </button>
         </form>
 
