@@ -14,5 +14,7 @@ public interface DanhMucRepository extends JpaRepository<DanhMuc, Integer> {
 
     List<DanhMuc> findByDanhMucCha_MaDanhMucAndTrangThaiTrueOrderByThuTuHienThiAsc(Integer maDanhMucCha);
 
+    long countByDanhMucCha_MaDanhMucAndTrangThaiTrue(Integer maDanhMucCha);
+
     Optional<DanhMuc> findByMaDanhMucAndTrangThaiTrue(Integer maDanhMuc);
 }

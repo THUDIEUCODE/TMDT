@@ -1,52 +1,118 @@
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import OrderStatusBadge from '../../components/order/OrderStatusBadge'
+import { mockOrders } from '../../data/mockOrders'
 import {
-  getOrderSubtotal,
-  getOrderTotal,
-  mockOrders,
+  cancelOrder,
+  getAllOrders,
+  getOrderById,
+  normalizeOrderStatus,
   orderStatusLabels,
-} from '../../data/mockOrders'
+  orderStatusOptions,
+  updateOrderStatus,
+} from '../../services/orderService'
 import './OrderManagementPage.css'
 
-const paymentOptions = ['COD', 'Chuyển khoản', 'Ví điện tử']
+const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`
+const formatDate = (value) => {
+  if (!value) {
+    return 'Đang cập nhật'
+  }
 
-const formatCurrency = (value) => `${value.toLocaleString('vi-VN')}đ`
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('vi-VN')
+}
 
-const statusOptions = [
-  { value: 'all', label: 'Tất cả' },
-  { value: 'pending', label: orderStatusLabels.pending },
-  { value: 'confirmed', label: orderStatusLabels.confirmed },
-  { value: 'shipping', label: orderStatusLabels.shipping },
-  { value: 'completed', label: orderStatusLabels.completed },
-  { value: 'cancelled', label: orderStatusLabels.cancelled },
-  { value: 'returning', label: orderStatusLabels.returning },
+const normalizeMockOrder = (order) => ({
+  ...order,
+  status: normalizeOrderStatus(order.status),
+  customerName: order.customerName || order.receiverName,
+  phone: order.phone || order.receiverPhone,
+  paymentStatus: order.paymentStatus || 'Đang cập nhật',
+  itemCount: order.itemCount || order.items.length,
+  subtotal: order.subtotal ?? order.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+  total:
+    order.total ??
+    order.items.reduce((sum, item) => sum + item.price * item.quantity, 0) +
+      order.shippingFee -
+      order.discount,
+  address: order.address || order.shippingAddress,
+  district: order.district || '',
+  province: order.province || '',
+  returnStatus: order.returnStatus || 'khongCo',
+  items: order.items.map((item) => ({
+    ...item,
+    total: item.total ?? item.price * item.quantity,
+  })),
+})
+const fallbackOrders = mockOrders.map(normalizeMockOrder)
+
+const staffStatusOptions = orderStatusOptions
+const statusStatItems = [
+  { key: 'total', label: 'Tổng đơn hàng' },
+  { key: 'choXacNhan', label: orderStatusLabels.choXacNhan },
+  { key: 'daXacNhan', label: orderStatusLabels.daXacNhan },
+  { key: 'dangGiao', label: orderStatusLabels.dangGiao },
+  { key: 'daGiao', label: orderStatusLabels.daGiao },
+  { key: 'daHuy', label: orderStatusLabels.daHuy },
+  { key: 'dangHoanHang', label: orderStatusLabels.dangHoanHang },
 ]
 
 function OrderManagementPage() {
-  const [orders, setOrders] = useState(mockOrders)
+  const [orders, setOrders] = useState(fallbackOrders)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
-  const [paymentFilter, setPaymentFilter] = useState('all')
   const [detailOrder, setDetailOrder] = useState(null)
-  const [cancelOrder, setCancelOrder] = useState(null)
+  const [cancelTargetOrder, setCancelTargetOrder] = useState(null)
   const [cancelReason, setCancelReason] = useState('')
-  const [cancelError, setCancelError] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
+  const [isDetailLoading, setIsDetailLoading] = useState(false)
+  const [pendingActionId, setPendingActionId] = useState('')
+  const [hasApiError, setHasApiError] = useState(false)
+  const [actionMessage, setActionMessage] = useState('')
+  const [actionError, setActionError] = useState('')
+
+  const loadOrders = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) {
+      setIsLoading(true)
+    }
+
+    try {
+      const apiOrders = await getAllOrders()
+      setOrders(apiOrders)
+      setHasApiError(false)
+    } catch {
+      setOrders(fallbackOrders)
+      setHasApiError(true)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    const loadTimer = window.setTimeout(() => {
+      loadOrders()
+    }, 0)
+
+    return () => {
+      window.clearTimeout(loadTimer)
+    }
+  }, [loadOrders])
 
   const stats = useMemo(() => {
     return orders.reduce(
       (result, order) => {
         result.total += 1
-        result[order.status] += 1
+        result[order.status] = (result[order.status] || 0) + 1
         return result
       },
       {
         total: 0,
-        pending: 0,
-        confirmed: 0,
-        shipping: 0,
-        completed: 0,
-        cancelled: 0,
-        returning: 0,
+        choXacNhan: 0,
+        daXacNhan: 0,
+        dangGiao: 0,
+        daGiao: 0,
+        daHuy: 0,
+        dangHoanHang: 0,
       },
     )
   }, [orders])
@@ -57,111 +123,114 @@ function OrderManagementPage() {
     return orders.filter((order) => {
       const matchesSearch =
         !normalizedSearch ||
-        order.code.toLowerCase().includes(normalizedSearch) ||
-        order.customerName.toLowerCase().includes(normalizedSearch) ||
-        order.phone.toLowerCase().includes(normalizedSearch)
+        String(order.code || order.id).toLowerCase().includes(normalizedSearch) ||
+        (order.customerName || '').toLowerCase().includes(normalizedSearch) ||
+        (order.phone || '').toLowerCase().includes(normalizedSearch)
       const matchesStatus = statusFilter === 'all' || order.status === statusFilter
-      const matchesPayment = paymentFilter === 'all' || order.paymentMethod === paymentFilter
 
-      return matchesSearch && matchesStatus && matchesPayment
+      return matchesSearch && matchesStatus
     })
-  }, [orders, paymentFilter, searchTerm, statusFilter])
+  }, [orders, searchTerm, statusFilter])
 
-  const changeOrderStatus = (orderId, nextStatus, label) => {
-    setOrders((currentOrders) =>
-      currentOrders.map((order) =>
-        order.id === orderId
-          ? {
-              ...order,
-              status: nextStatus,
-              statusHistory: [
-                ...order.statusHistory,
-                { time: new Date().toLocaleString('vi-VN'), label },
-              ],
-              timeline: [
-                ...order.statusHistory,
-                { time: new Date().toLocaleString('vi-VN'), label },
-              ],
-            }
-          : order,
-      ),
-    )
+  const openDetailModal = async (order) => {
+    setActionError('')
+    setActionMessage('')
+    setDetailOrder(order)
+    setIsDetailLoading(true)
+
+    try {
+      const apiOrder = await getOrderById(order.id)
+      setDetailOrder(apiOrder)
+    } catch {
+      setDetailOrder(order)
+    } finally {
+      setIsDetailLoading(false)
+    }
+  }
+
+  const changeOrderStatus = async (order, nextStatus) => {
+    setActionError('')
+    setActionMessage('')
+
+    try {
+      setPendingActionId(order.id)
+      await updateOrderStatus(order.id, nextStatus)
+      setActionMessage('Đã cập nhật trạng thái đơn hàng.')
+      await loadOrders({ silent: true })
+    } catch (error) {
+      setActionError(error?.message || 'Không thể cập nhật trạng thái đơn hàng.')
+    } finally {
+      setPendingActionId('')
+    }
   }
 
   const openCancelModal = (order) => {
-    setCancelOrder(order)
+    setCancelTargetOrder(order)
     setCancelReason('')
-    setCancelError('')
+    setActionError('')
+    setActionMessage('')
   }
 
-  const submitCancelOrder = (event) => {
+  const submitCancelOrder = async (event) => {
     event.preventDefault()
+    setActionError('')
+    setActionMessage('')
 
     if (!cancelReason.trim()) {
-      setCancelError('Vui lòng nhập lý do hủy đơn.')
+      setActionError('Vui lòng nhập lý do hủy đơn.')
       return
     }
 
-    setOrders((currentOrders) =>
-      currentOrders.map((order) =>
-        order.id === cancelOrder.id
-          ? {
-              ...order,
-              status: 'cancelled',
-              cancelReason: cancelReason.trim(),
-              statusHistory: [
-                ...order.statusHistory,
-                { time: new Date().toLocaleString('vi-VN'), label: 'Nhân viên đã hủy đơn' },
-              ],
-              timeline: [
-                ...order.statusHistory,
-                { time: new Date().toLocaleString('vi-VN'), label: 'Nhân viên đã hủy đơn' },
-              ],
-            }
-          : order,
-      ),
-    )
-    setCancelOrder(null)
-    setCancelReason('')
-    setCancelError('')
+    try {
+      setPendingActionId(cancelTargetOrder.id)
+      await cancelOrder(cancelTargetOrder.id, { lyDoHuy: cancelReason.trim() })
+      setCancelTargetOrder(null)
+      setCancelReason('')
+      setActionMessage('Đã hủy đơn hàng.')
+      await loadOrders({ silent: true })
+    } catch (error) {
+      setActionError(error?.message || 'Không thể hủy đơn hàng.')
+    } finally {
+      setPendingActionId('')
+    }
   }
 
   const renderActions = (order) => (
     <div className="staff-order-actions">
-      <button type="button" onClick={() => setDetailOrder(order)}>
+      <button type="button" onClick={() => openDetailModal(order)}>
         Xem chi tiết
       </button>
-      {order.status === 'pending' ? (
+      {order.status === 'choXacNhan' ? (
         <>
           <button
             type="button"
-            onClick={() => changeOrderStatus(order.id, 'confirmed', 'Nhân viên đã xác nhận đơn hàng')}
+            disabled={pendingActionId === order.id}
+            onClick={() => changeOrderStatus(order, 'daXacNhan')}
           >
             Xác nhận
           </button>
-          <button type="button" onClick={() => openCancelModal(order)}>
+          <button type="button" disabled={pendingActionId === order.id} onClick={() => openCancelModal(order)}>
             Hủy đơn
           </button>
         </>
       ) : null}
-      {order.status === 'confirmed' ? (
+      {order.status === 'daXacNhan' ? (
         <button
           type="button"
-          onClick={() => changeOrderStatus(order.id, 'shipping', 'Đơn hàng chuyển sang giao hàng')}
+          disabled={pendingActionId === order.id}
+          onClick={() => changeOrderStatus(order, 'dangGiao')}
         >
           Giao hàng
         </button>
       ) : null}
-      {order.status === 'shipping' ? (
+      {order.status === 'dangGiao' ? (
         <button
           type="button"
-          onClick={() => changeOrderStatus(order.id, 'completed', 'Đơn hàng đã hoàn tất')}
+          disabled={pendingActionId === order.id}
+          onClick={() => changeOrderStatus(order, 'daGiao')}
         >
           Hoàn tất
         </button>
-      ) : null}
-      {order.status === 'returning' ? (
-        <Link to="/staff/returns">Xử lý hoàn</Link>
       ) : null}
     </div>
   )
@@ -177,35 +246,22 @@ function OrderManagementPage() {
       </section>
 
       <section className="staff-order-stat-grid">
-        <article>
-          <span>Tổng đơn hàng</span>
-          <strong>{stats.total}</strong>
-        </article>
-        <article>
-          <span>Chờ xác nhận</span>
-          <strong>{stats.pending}</strong>
-        </article>
-        <article>
-          <span>Đã xác nhận</span>
-          <strong>{stats.confirmed}</strong>
-        </article>
-        <article>
-          <span>Đang giao</span>
-          <strong>{stats.shipping}</strong>
-        </article>
-        <article>
-          <span>Đã giao</span>
-          <strong>{stats.completed}</strong>
-        </article>
-        <article>
-          <span>Đã hủy</span>
-          <strong>{stats.cancelled}</strong>
-        </article>
-        <article>
-          <span>Đang hoàn hàng</span>
-          <strong>{stats.returning}</strong>
-        </article>
+        {statusStatItems.map((item) => (
+          <article key={item.key}>
+            <span>{item.label}</span>
+            <strong>{stats[item.key] || 0}</strong>
+          </article>
+        ))}
       </section>
+
+      {isLoading ? <p className="staff-order-message">Đang tải đơn hàng...</p> : null}
+      {hasApiError ? (
+        <p className="staff-order-message">
+          Không kết nối được backend, đang dùng dữ liệu mẫu.
+        </p>
+      ) : null}
+      {actionMessage ? <p className="staff-order-success">{actionMessage}</p> : null}
+      {actionError ? <p className="staff-order-form-error">{actionError}</p> : null}
 
       <section className="staff-order-filter-panel">
         <label>
@@ -219,20 +275,9 @@ function OrderManagementPage() {
         <label>
           Trạng thái
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-            {statusOptions.map((option) => (
+            {staffStatusOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Phương thức thanh toán
-          <select value={paymentFilter} onChange={(event) => setPaymentFilter(event.target.value)}>
-            <option value="all">Tất cả</option>
-            {paymentOptions.map((option) => (
-              <option key={option} value={option}>
-                {option}
               </option>
             ))}
           </select>
@@ -242,7 +287,7 @@ function OrderManagementPage() {
       <section className="staff-order-table-card">
         <div className="staff-order-table-summary">
           <strong>{filteredOrders.length} đơn hàng</strong>
-          <span>Dữ liệu mock, thao tác cập nhật bằng state nội bộ.</span>
+          <span>Dữ liệu được tải từ backend khi kết nối thành công.</span>
         </div>
 
         <div className="staff-order-management-table">
@@ -253,33 +298,40 @@ function OrderManagementPage() {
             <span>Ngày đặt</span>
             <span>Tổng tiền</span>
             <span>Thanh toán</span>
+            <span>TT thanh toán</span>
             <span>Trạng thái</span>
             <span>Thao tác</span>
           </div>
 
           {filteredOrders.map((order) => (
             <article className="staff-order-table-row" key={order.id}>
-              <strong>{order.code}</strong>
+              <strong>{order.code || order.id}</strong>
               <span>{order.customerName}</span>
               <span>{order.phone}</span>
-              <span>{order.orderDate}</span>
-              <b>{formatCurrency(getOrderTotal(order))}</b>
-              <span>{order.paymentMethod}</span>
-              <span className={`staff-order-status staff-order-status-${order.status}`}>
-                {orderStatusLabels[order.status]}
-              </span>
+              <span>{formatDate(order.orderDate)}</span>
+              <b>{formatCurrency(order.total)}</b>
+              <span>{order.paymentMethod || 'Đang cập nhật'}</span>
+              <span>{order.paymentStatus || 'Đang cập nhật'}</span>
+              <OrderStatusBadge status={order.status} />
               {renderActions(order)}
             </article>
           ))}
+
+          {filteredOrders.length === 0 && !isLoading ? (
+            <section className="empty-products">
+              <h2>Chưa có đơn hàng phù hợp</h2>
+              <p>Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc trạng thái.</p>
+            </section>
+          ) : null}
         </div>
       </section>
 
-      {cancelOrder ? (
+      {cancelTargetOrder ? (
         <div className="staff-order-modal-backdrop" role="presentation">
           <form className="staff-order-modal" onSubmit={submitCancelOrder}>
             <div className="staff-order-modal-heading">
               <span>Hủy đơn hàng</span>
-              <h2>{cancelOrder.code}</h2>
+              <h2>{cancelTargetOrder.code || cancelTargetOrder.id}</h2>
             </div>
             <label>
               Lý do hủy
@@ -288,17 +340,16 @@ function OrderManagementPage() {
                 value={cancelReason}
                 onChange={(event) => {
                   setCancelReason(event.target.value)
-                  setCancelError('')
+                  setActionError('')
                 }}
-                placeholder="Nhập lý do hủy đơn hàng"
+                placeholder="Khách yêu cầu hủy đơn"
               />
             </label>
-            {cancelError ? <p className="staff-order-form-error">{cancelError}</p> : null}
             <div className="staff-order-modal-actions">
-              <button type="button" onClick={() => setCancelOrder(null)}>
+              <button type="button" onClick={() => setCancelTargetOrder(null)}>
                 Đóng
               </button>
-              <button className="button" type="submit">
+              <button className="button" type="submit" disabled={pendingActionId === cancelTargetOrder.id}>
                 Xác nhận hủy
               </button>
             </div>
@@ -311,88 +362,103 @@ function OrderManagementPage() {
           <section className="staff-order-modal staff-order-detail-modal">
             <div className="staff-order-modal-heading">
               <span>Chi tiết đơn hàng</span>
-              <h2>{detailOrder.code}</h2>
+              <h2>{detailOrder.code || detailOrder.id}</h2>
             </div>
+
+            {isDetailLoading ? <p className="staff-order-message">Đang tải chi tiết đơn...</p> : null}
 
             <div className="staff-order-detail-grid">
               <div>
                 <span>Ngày đặt</span>
-                <strong>{detailOrder.orderDate}</strong>
+                <strong>{formatDate(detailOrder.orderDate)}</strong>
               </div>
               <div>
-                <span>Trạng thái</span>
-                <strong>{orderStatusLabels[detailOrder.status]}</strong>
+                <span>Trạng thái đơn hàng</span>
+                <strong>{orderStatusLabels[detailOrder.status] || detailOrder.status}</strong>
               </div>
               <div>
-                <span>Khách hàng</span>
-                <strong>{detailOrder.customerName}</strong>
+                <span>Trạng thái thanh toán</span>
+                <strong>{detailOrder.paymentStatus || 'Đang cập nhật'}</strong>
+              </div>
+              <div>
+                <span>Người nhận</span>
+                <strong>{detailOrder.receiverName || detailOrder.customerName}</strong>
               </div>
               <div>
                 <span>Số điện thoại</span>
-                <strong>{detailOrder.phone}</strong>
+                <strong>{detailOrder.receiverPhone || detailOrder.phone}</strong>
               </div>
               <div className="staff-order-detail-full">
-                <span>Địa chỉ nhận hàng</span>
-                <strong>{detailOrder.address}</strong>
+                <span>Địa chỉ giao hàng</span>
+                <strong>{detailOrder.shippingAddress || detailOrder.address}</strong>
               </div>
               <div>
-                <span>Thanh toán</span>
-                <strong>{detailOrder.paymentMethod}</strong>
+                <span>Quận/huyện</span>
+                <strong>{detailOrder.district || 'Đang cập nhật'}</strong>
               </div>
               <div>
-                <span>Ghi chú</span>
+                <span>Tỉnh/thành</span>
+                <strong>{detailOrder.province || 'Đang cập nhật'}</strong>
+              </div>
+              <div>
+                <span>Phương thức thanh toán</span>
+                <strong>{detailOrder.paymentMethod || 'Đang cập nhật'}</strong>
+              </div>
+              <div>
+                <span>Ghi chú giao hàng</span>
                 <strong>{detailOrder.note || 'Không có'}</strong>
               </div>
+              {detailOrder.cancelReason ? (
+                <div className="staff-order-detail-full">
+                  <span>Lý do hủy</span>
+                  <strong>{detailOrder.cancelReason}</strong>
+                </div>
+              ) : null}
+              {detailOrder.returnReason ? (
+                <div className="staff-order-detail-full">
+                  <span>Lý do hoàn hàng</span>
+                  <strong>{detailOrder.returnReason}</strong>
+                </div>
+              ) : null}
+              {detailOrder.returnStatus && detailOrder.returnStatus !== 'khongCo' ? (
+                <div>
+                  <span>Trạng thái hoàn hàng</span>
+                  <strong>{detailOrder.returnStatus}</strong>
+                </div>
+              ) : null}
             </div>
 
             <div className="staff-order-detail-items">
               <h3>Sản phẩm trong đơn</h3>
-              {detailOrder.items.map((item) => (
+              {(detailOrder.items || []).map((item) => (
                 <div className="staff-order-detail-item" key={item.id}>
                   <span>{item.image}</span>
                   <strong>{item.name}</strong>
                   <small>{item.variant}</small>
                   <small>x{item.quantity}</small>
                   <small>{formatCurrency(item.price)}</small>
-                  <b>{formatCurrency(item.price * item.quantity)}</b>
+                  <b>{formatCurrency(item.total || item.price * item.quantity)}</b>
                 </div>
               ))}
             </div>
 
             <div className="staff-order-total-box">
               <div>
-                <span>Tạm tính</span>
-                <strong>{formatCurrency(getOrderSubtotal(detailOrder))}</strong>
+                <span>Tổng tiền hàng</span>
+                <strong>{formatCurrency(detailOrder.subtotal)}</strong>
               </div>
               <div>
                 <span>Phí vận chuyển</span>
                 <strong>{formatCurrency(detailOrder.shippingFee)}</strong>
               </div>
               <div>
-                <span>Giảm giá/voucher</span>
+                <span>Tiền giảm</span>
                 <strong>-{formatCurrency(detailOrder.discount)}</strong>
               </div>
               <div>
                 <span>Tổng thanh toán</span>
-                <strong>{formatCurrency(getOrderTotal(detailOrder))}</strong>
+                <strong>{formatCurrency(detailOrder.total)}</strong>
               </div>
-            </div>
-
-            {detailOrder.cancelReason ? (
-              <div className="staff-order-cancel-reason">
-                <strong>Lý do hủy</strong>
-                <p>{detailOrder.cancelReason}</p>
-              </div>
-            ) : null}
-
-            <div className="staff-order-history">
-              <h3>Lịch sử trạng thái</h3>
-              {detailOrder.statusHistory.map((item) => (
-                <div key={`${item.time}-${item.label}`}>
-                  <span>{item.time}</span>
-                  <strong>{item.label}</strong>
-                </div>
-              ))}
             </div>
 
             <div className="staff-order-modal-actions">

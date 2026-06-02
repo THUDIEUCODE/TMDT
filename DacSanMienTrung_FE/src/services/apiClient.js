@@ -1,9 +1,13 @@
+import { getToken } from '../utils/authStorage'
+
 const API_BASE_URL = 'http://localhost:8090/api'
 
 async function requestApi(path, options = {}) {
+  const token = getToken()
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
     ...options,

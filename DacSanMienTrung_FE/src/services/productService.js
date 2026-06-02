@@ -25,12 +25,24 @@ const createInitials = (value) =>
     .join('')
     .toUpperCase()
 
-const mapVariantFromApi = (variant, productId) => ({
-  id: String(variant.maBienThe ?? variant.id ?? `${productId}-variant`),
-  label: variant.tenBienThe ?? variant.label ?? variant.quyCach ?? 'Mặc định',
-  price: Number(variant.giaBan ?? variant.gia ?? variant.price ?? 0),
-  stock: Number(variant.tonKho ?? variant.stock ?? 0),
-})
+const mapVariantFromApi = (variant, productId) => {
+  const id = variant.maBienThe ?? variant.id ?? `${productId}-variant`
+  const label =
+    variant.tenBienThe ||
+    variant.label ||
+    [variant.trongLuong, variant.quyCachDongGoi].filter(Boolean).join(' - ') ||
+    variant.quyCach ||
+    'Mặc định'
+
+  return {
+    ...variant,
+    id: String(id),
+    maBienThe: id,
+    label,
+    price: Number(variant.giaBan ?? variant.gia ?? variant.price ?? 0),
+    stock: Number(variant.soLuongTon ?? variant.tonKho ?? variant.stock ?? 0),
+  }
+}
 
 export const mapProductFromApi = (apiProduct = {}) => {
   const id = apiProduct.maSanPham ?? apiProduct.id
@@ -39,11 +51,10 @@ export const mapProductFromApi = (apiProduct = {}) => {
   const categoryName = apiProduct.tenDanhMuc ?? apiProduct.categoryName ?? apiProduct.category ?? ''
   const province = apiProduct.tenTinh ?? apiProduct.province ?? apiProduct.origin ?? ''
   const price = Number(apiProduct.giaBanThapNhat ?? apiProduct.giaBan ?? apiProduct.price ?? 0)
-  const variants = Array.isArray(apiProduct.bienThe)
-    ? apiProduct.bienThe.map((variant) => mapVariantFromApi(variant, id))
-    : Array.isArray(apiProduct.variants)
-      ? apiProduct.variants.map((variant) => mapVariantFromApi(variant, id))
-      : []
+  const apiVariants = apiProduct.bienThes ?? apiProduct.bienThe ?? apiProduct.variants
+  const variants = Array.isArray(apiVariants)
+    ? apiVariants.map((variant) => mapVariantFromApi(variant, id))
+    : []
 
   return {
     ...apiProduct,
@@ -75,6 +86,7 @@ export const mapProductFromApi = (apiProduct = {}) => {
         : [
             {
               id: `${id ?? name}-default`,
+              maBienThe: id ?? name,
               label: 'Mặc định',
               price,
               stock: Number(apiProduct.tongTonKho ?? apiProduct.stock ?? 0),
@@ -111,3 +123,7 @@ export const getProductsByCategory = async (categoryId) => {
   return getArrayPayload(payload).map(mapProductFromApi)
 }
 
+export const getProductsByCategoryTree = async (categoryId) => {
+  const payload = await getApi(`/products/category-tree/${categoryId}`)
+  return getArrayPayload(payload).map(mapProductFromApi)
+}

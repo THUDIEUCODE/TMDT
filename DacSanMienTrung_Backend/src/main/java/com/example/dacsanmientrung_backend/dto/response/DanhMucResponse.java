@@ -17,4 +17,6 @@ public class DanhMucResponse {
     private String moTa;
     private Integer thuTuHienThi;
     private Boolean trangThai;
+    private Integer soSanPham;
+    private Integer soDanhMucCon;
 }

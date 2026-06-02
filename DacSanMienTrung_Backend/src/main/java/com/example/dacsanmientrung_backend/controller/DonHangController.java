@@ -1,6 +1,9 @@
 package com.example.dacsanmientrung_backend.controller;
 
 import com.example.dacsanmientrung_backend.dto.request.CancelOrderRequest;
+import com.example.dacsanmientrung_backend.dto.request.ConfirmBankTransferRequest;
+import com.example.dacsanmientrung_backend.dto.request.ConfirmReceivedRequest;
+import com.example.dacsanmientrung_backend.dto.request.ConfirmWalletPaymentRequest;
 import com.example.dacsanmientrung_backend.dto.request.CreateOrderRequest;
 import com.example.dacsanmientrung_backend.dto.response.OrderDetailResponse;
 import com.example.dacsanmientrung_backend.dto.response.OrderResponse;
@@ -67,5 +70,29 @@ public class DonHangController {
             @RequestParam String status
     ) {
         return donHangService.updateOrderStatus(maDonHang, status);
+    }
+
+    @PutMapping("/{maDonHang}/confirm-received")
+    public OrderDetailResponse confirmReceived(
+            @PathVariable Integer maDonHang,
+            @RequestBody ConfirmReceivedRequest request
+    ) {
+        return donHangService.confirmReceived(maDonHang, request);
+    }
+
+    @PutMapping("/{maDonHang}/confirm-bank-transfer")
+    public OrderDetailResponse confirmBankTransfer(
+            @PathVariable Integer maDonHang,
+            @RequestBody ConfirmBankTransferRequest request
+    ) {
+        return donHangService.confirmBankTransfer(maDonHang, request);
+    }
+
+    @PutMapping("/{maDonHang}/confirm-wallet-payment")
+    public OrderDetailResponse confirmWalletPayment(
+            @PathVariable Integer maDonHang,
+            @RequestBody ConfirmWalletPaymentRequest request
+    ) {
+        return donHangService.confirmWalletPayment(maDonHang, request);
     }
 }

@@ -73,7 +73,7 @@
 
 .staff-order-filter-panel {
   display: grid;
-  grid-template-columns: minmax(280px, 1fr) 220px 220px;
+  grid-template-columns: minmax(280px, 1fr) 220px;
   gap: 14px;
   padding: 18px;
 }
@@ -146,10 +146,10 @@
 .staff-order-table-head,
 .staff-order-table-row {
   display: grid;
-  grid-template-columns: 140px 150px 120px 105px 120px 120px 130px minmax(230px, 1fr);
+  grid-template-columns: 140px 150px 120px 105px 120px 120px 120px 130px minmax(230px, 1fr);
   gap: 12px;
   align-items: center;
-  min-width: 1220px;
+  min-width: 1360px;
 }
 
 .staff-order-table-head {
@@ -288,6 +288,26 @@
   margin: 0;
   color: var(--color-red);
   font-weight: 800;
+}
+
+.staff-order-message,
+.staff-order-success {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+.staff-order-message {
+  color: var(--color-muted);
+  background: #fffaf0;
+  border: 1px solid var(--color-border);
+}
+
+.staff-order-success {
+  color: var(--color-green);
+  background: #effaf2;
+  border: 1px solid rgba(47, 143, 79, 0.22);
 }
 
 .staff-order-modal-actions {

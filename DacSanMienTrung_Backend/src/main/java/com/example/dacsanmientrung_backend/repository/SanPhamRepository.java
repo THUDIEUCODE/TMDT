@@ -15,8 +15,12 @@ public interface SanPhamRepository extends JpaRepository<SanPham, Integer> {
     @EntityGraph(attributePaths = {"danhMuc", "bienThes"})
     List<SanPham> findByDanhMuc_MaDanhMucAndTrangThaiTrue(Integer maDanhMuc);
 
+    long countByDanhMuc_MaDanhMucAndTrangThaiTrue(Integer maDanhMuc);
+
     @EntityGraph(attributePaths = {"danhMuc", "bienThes"})
     List<SanPham> findByDanhMuc_MaDanhMucInAndTrangThaiTrue(List<Integer> maDanhMucs);
+
+    long countByDanhMuc_MaDanhMucInAndTrangThaiTrue(List<Integer> maDanhMucs);
 
     @EntityGraph(attributePaths = {"danhMuc", "bienThes"})
     List<SanPham> findByTenSanPhamContainingIgnoreCaseAndTrangThaiTrue(String tenSanPham);

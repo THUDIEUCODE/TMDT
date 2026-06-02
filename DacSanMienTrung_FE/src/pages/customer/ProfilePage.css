@@ -250,7 +250,18 @@
   background: #fff2c6;
 }
 
+.status-choXacNhan,
+.status-daXacNhan {
+  color: #8a4d00;
+  background: #fff2c6;
+}
+
 .status-shipping {
+  color: #075985;
+  background: #dff3ff;
+}
+
+.status-dangGiao {
   color: #075985;
   background: #dff3ff;
 }
@@ -260,12 +271,27 @@
   background: #dcfce7;
 }
 
+.status-daGiao {
+  color: #166534;
+  background: #dcfce7;
+}
+
 .status-cancelled {
   color: #991b1b;
   background: #fee2e2;
 }
 
+.status-daHuy {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
 .status-returning {
+  color: #6c3483;
+  background: #f2e4f8;
+}
+
+.status-dangHoanHang {
   color: #6c3483;
   background: #f2e4f8;
 }
@@ -373,7 +399,8 @@
 }
 
 .profile-modal input,
-.profile-modal textarea {
+.profile-modal textarea,
+.profile-modal select {
   width: 100%;
   padding: 12px 14px;
   color: var(--color-text);
