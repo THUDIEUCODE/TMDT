@@ -1,17 +1,81 @@
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import BlogCard from '../../components/blog/BlogCard'
 import ProductCard from '../../components/product/ProductCard'
 import { mockBlogs } from '../../data/mockBlogs'
 import { mockProducts } from '../../data/mockProducts'
+import { getBlogById, mapBlogFromApi } from '../../services/blogService'
+import { getProductById, mapProductFromApi } from '../../services/productService'
+import { getImageUrl, handleImageError } from '../../utils/imageUtils'
+
+const fallbackBlogs = mockBlogs.map(mapBlogFromApi)
+const fallbackProducts = mockProducts.map(mapProductFromApi)
 
 function BlogDetailPage() {
   const { id } = useParams()
-  const blog = mockBlogs.find((item) => item.id === id || item.slug === id)
+  const fallbackBlog = useMemo(
+    () => fallbackBlogs.find((item) => item.id === id || item.slug === id),
+    [id],
+  )
+  const [blog, setBlog] = useState(fallbackBlog)
+  const [relatedProducts, setRelatedProducts] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [hasApiError, setHasApiError] = useState(false)
+
+  useEffect(() => {
+    let isMounted = true
+
+    const loadBlog = async () => {
+      setIsLoading(true)
+
+      try {
+        const apiBlog = await getBlogById(id)
+
+        if (!isMounted) return
+
+        const nextBlog = apiBlog || fallbackBlog
+        const embeddedProducts = (nextBlog?.relatedProducts || []).map(mapProductFromApi)
+        const relatedProductIds = [
+          ...(nextBlog?.relatedProductIds || []),
+          ...embeddedProducts.map((product) => product.id),
+        ].filter(Boolean)
+        const uniqueProductIds = [...new Set(relatedProductIds.map((productId) => String(productId)))]
+        const productDetails = await Promise.all(
+          uniqueProductIds.map((productId) =>
+            getProductById(productId).catch(() => embeddedProducts.find((product) => String(product.id) === productId)),
+          ),
+        )
+
+        if (!isMounted) return
+
+        setBlog(nextBlog)
+        setRelatedProducts(productDetails.filter(Boolean).map(mapProductFromApi))
+        setHasApiError(false)
+      } catch {
+        if (!isMounted) return
+
+        setBlog(fallbackBlog)
+        setRelatedProducts(
+          fallbackProducts.filter((product) => fallbackBlog?.relatedProductIds?.includes(product.id)),
+        )
+        setHasApiError(true)
+      } finally {
+        if (isMounted) setIsLoading(false)
+      }
+    }
+
+    loadBlog()
+
+    return () => {
+      isMounted = false
+    }
+  }, [fallbackBlog, id])
 
   if (!blog) {
     return (
       <section className="page-card">
-        <h1 className="page-title">Không tìm thấy bài viết</h1>
+        <h1 className="page-title">{isLoading ? 'Đang tải bài viết...' : 'Không tìm thấy bài viết'}</h1>
+        {hasApiError ? <p>Không kết nối được backend, đang dùng dữ liệu mẫu.</p> : null}
         <Link className="button" to="/blogs">
           Quay lại blog
         </Link>
@@ -19,11 +83,17 @@ function BlogDetailPage() {
     )
   }
 
-  const relatedProducts = mockProducts.filter((product) => blog.relatedProductIds.includes(product.id))
-  const relatedBlogs = mockBlogs.filter((item) => item.id !== blog.id && item.topic === blog.topic).slice(0, 3)
+  const relatedBlogs = fallbackBlogs.filter((item) => item.id !== blog.id && item.topic === blog.topic).slice(0, 3)
 
   return (
     <div className="blog-detail-page">
+      {isLoading ? <p className="product-result-summary">Đang tải bài viết...</p> : null}
+      {hasApiError ? (
+        <p className="product-result-summary">
+          Không kết nối được backend, đang dùng dữ liệu mẫu.
+        </p>
+      ) : null}
+
       <nav className="breadcrumb">
         <Link to="/">Trang chủ</Link>
         <span>›</span>
@@ -34,14 +104,14 @@ function BlogDetailPage() {
 
       <article className="blog-detail-article">
         <div className="blog-detail-image">
-          <span>{blog.image}</span>
+          <img src={getImageUrl(blog.hinhAnh || blog.image)} alt={blog.title} onError={handleImageError} />
         </div>
         <div className="blog-detail-content">
           <div className="blog-detail-meta">
-            <span>{blog.topic}</span>
-            <span>{blog.province}</span>
-            <time>{blog.publishedDate}</time>
-            <span>{blog.author}</span>
+            <span>{blog.topic || 'Chủ đề'}</span>
+            <span>{blog.province || 'Miền Trung'}</span>
+            <time>{blog.publishedDate || blog.createdAt}</time>
+            <span>{blog.author || 'Đang cập nhật'}</span>
           </div>
           <h1>{blog.title}</h1>
           <p className="blog-detail-description">{blog.description}</p>

@@ -10,7 +10,7 @@ public interface BlogService {
 
     List<BlogResponse> getPublicBlogs(String keyword, String topic, String province);
 
-    BlogDetailResponse getPublicBlogById(Integer maBlog);
+    BlogDetailResponse getBlogById(Integer maBlog);
 
     List<BlogResponse> getBlogsByTopic(String chuDe);
 

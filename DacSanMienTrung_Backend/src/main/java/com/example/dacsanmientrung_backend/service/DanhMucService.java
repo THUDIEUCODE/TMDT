@@ -9,6 +9,10 @@ public interface DanhMucService {
 
     List<DanhMucResponse> getAllActiveCategories();
 
+    List<DanhMucResponse> getManageCategories();
+
+    DanhMucResponse getManageCategoryById(Integer id);
+
     List<DanhMucResponse> getRootCategories();
 
     List<DanhMucResponse> getChildCategories(Integer parentId);

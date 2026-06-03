@@ -4,7 +4,17 @@ import ProductCard from '../../components/product/ProductCard'
 import { mockProducts } from '../../data/mockProducts'
 import { addToCart } from '../../services/cartService'
 import { getProductById, getProductsByCategory } from '../../services/productService'
+import { getReviewsByProduct } from '../../services/reviewService'
 import { getCurrentUserId, isLoggedIn } from '../../utils/authStorage'
+import { getImageUrl, handleImageError } from '../../utils/imageUtils'
+
+const formatDate = (value) => {
+  if (!value) return 'Đang cập nhật'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('vi-VN')
+}
+
+const renderStars = (rating) => '★'.repeat(Math.max(0, Math.min(5, Number(rating || 0))))
 
 function ProductDetailPage() {
   const { id } = useParams()
@@ -22,6 +32,10 @@ function ProductDetailPage() {
   const [cartMessage, setCartMessage] = useState('')
   const [cartError, setCartError] = useState('')
   const [isAddingToCart, setIsAddingToCart] = useState(false)
+  const [reviews, setReviews] = useState([])
+  const [isReviewsLoading, setIsReviewsLoading] = useState(false)
+  const [reviewsError, setReviewsError] = useState('')
+  const [selectedImage, setSelectedImage] = useState('')
 
   useEffect(() => {
     let isMounted = true
@@ -76,9 +90,81 @@ function ProductDetailPage() {
     }
   }, [fallbackProduct, id])
 
+  useEffect(() => {
+    const productId = product?.maSanPham ?? product?.id
+
+    if (!productId || !/^\d+$/.test(String(productId))) {
+      setReviews([])
+      setReviewsError('')
+      setIsReviewsLoading(false)
+      return undefined
+    }
+
+    let isMounted = true
+
+    const loadReviews = async () => {
+      setIsReviewsLoading(true)
+      setReviewsError('')
+
+      try {
+        const apiReviews = await getReviewsByProduct(productId)
+
+        if (!isMounted) {
+          return
+        }
+
+        setReviews(apiReviews)
+      } catch (error) {
+        if (!isMounted) {
+          return
+        }
+
+        setReviews([])
+        setReviewsError(error?.message || 'Không thể tải đánh giá sản phẩm.')
+      } finally {
+        if (isMounted) {
+          setIsReviewsLoading(false)
+        }
+      }
+    }
+
+    loadReviews()
+
+    return () => {
+      isMounted = false
+    }
+  }, [product?.id, product?.maSanPham])
+
+  const galleryImages = useMemo(() => {
+    const productImages = Array.isArray(product?.hinhAnhs)
+      ? [...product.hinhAnhs]
+          .sort((a, b) => Number(a.thuTu ?? 0) - Number(b.thuTu ?? 0))
+          .map((image) => image.duongDanAnh || image.hinhAnh || image.image || image)
+          .filter(Boolean)
+      : []
+
+    if (productImages.length > 0) {
+      return productImages
+    }
+
+    return [product?.hinhAnh || product?.image].filter(Boolean)
+  }, [product])
+
+  useEffect(() => {
+    setSelectedImage(galleryImages[0] || '')
+  }, [galleryImages])
+
   const selectedVariant = product?.variants?.find((variant) => variant.id === selectedVariantId)
   const displayPrice = selectedVariant?.price || product?.price || 0
   const maxQuantity = selectedVariant?.stock || product?.stock || 1
+  const reviewStats = useMemo(() => {
+    const total = reviews.length
+    const average = total
+      ? reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / total
+      : 0
+
+    return { total, average }
+  }, [reviews])
 
   if (!product) {
     return (
@@ -189,12 +275,23 @@ function ProductDetailPage() {
       <section className="product-detail-main">
         <div className="product-detail-gallery">
           <div className="product-detail-image">
-            <span>{product.image}</span>
+            <img
+              src={getImageUrl(selectedImage || product.hinhAnh || product.image)}
+              alt={product.name}
+              onError={handleImageError}
+            />
           </div>
           <div className="product-detail-thumbs">
-            <span>{product.image}</span>
-            <span>{(product.subCategory || product.categoryName || 'SP').slice(0, 2).toUpperCase()}</span>
-            <span>{(product.province || product.origin || 'MT').slice(0, 2).toUpperCase()}</span>
+            {galleryImages.map((image, index) => (
+              <button
+                className={image === selectedImage ? 'active' : ''}
+                key={`${image}-${index}`}
+                type="button"
+                onClick={() => setSelectedImage(image)}
+              >
+                <img src={getImageUrl(image)} alt={`${product.name} ${index + 1}`} onError={handleImageError} />
+              </button>
+            ))}
           </div>
         </div>
 
@@ -286,6 +383,39 @@ function ProductDetailPage() {
           <h2>Câu chuyện văn hóa</h2>
           <p>{product.culturalStory}</p>
         </article>
+      </section>
+
+      <section className="product-review-section">
+        <div className="section-heading">
+          <span>Đánh giá từ khách hàng</span>
+          <h2>Đánh giá từ khách hàng</h2>
+          <p>{reviewStats.total} đánh giá · {reviewStats.average.toFixed(1)}/5 sao</p>
+        </div>
+
+        {isReviewsLoading ? <p className="product-result-summary">Đang tải đánh giá...</p> : null}
+        {reviewsError ? <p className="form-error">{reviewsError}</p> : null}
+
+        <div className="product-review-list">
+          {reviews.map((review) => (
+            <article className="product-review-card" key={review.id || `${review.customerName}-${review.reviewDate}`}>
+              <div className="product-review-card-head">
+                <div>
+                  <strong>{review.customerName}</strong>
+                  {review.variantName || review.variant ? <span>{review.variantName || review.variant}</span> : null}
+                </div>
+                <b>{renderStars(review.rating)} <small>{Number(review.rating || 0)}/5</small></b>
+              </div>
+              <p>{review.content || 'Không có nội dung đánh giá.'}</p>
+              <time>{formatDate(review.reviewDate)}</time>
+            </article>
+          ))}
+
+          {reviews.length === 0 && !isReviewsLoading ? (
+            <section className="empty-products">
+              <h2>Chưa có đánh giá nào cho sản phẩm này.</h2>
+            </section>
+          ) : null}
+        </div>
       </section>
 
       {relatedProducts.length > 0 && (

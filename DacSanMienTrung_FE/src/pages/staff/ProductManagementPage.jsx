@@ -1,23 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { mockCategories } from '../../data/mockCategories'
 import { mockProducts } from '../../data/mockProducts'
-import { getCategories, mapCategoryFromApi } from '../../services/categoryService'
+import { getManageCategories, mapCategoryFromApi } from '../../services/categoryService'
 import {
   createProduct,
-  deleteProduct,
-  getProductById,
-  getProducts,
+  getManageProductById,
+  getManageProducts,
   mapProductFromApi,
   toggleProduct,
   updateProduct,
 } from '../../services/productService'
 import {
   createVariant,
-  deleteVariant,
   getVariantsByProduct,
   toggleVariant,
   updateVariant,
 } from '../../services/variantService'
+import { getImageUrl, handleImageError } from '../../utils/imageUtils'
 import './ProductManagementPage.css'
 
 const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`
@@ -65,10 +64,13 @@ const emptyVariantForm = {
 
 const getTotalStock = (product) => Number(product.stock ?? 0)
 const getProductStatusKey = (product) => {
+  if (!product.status) return 'hidden'
   if (getTotalStock(product) === 0) return 'outOfStock'
-  return product.status ? 'active' : 'hidden'
+  return 'active'
 }
 const getProductStatusLabel = (product) => statusOptions.find((item) => item.value === getProductStatusKey(product))?.label
+const getToggleConfirmMessage = (isActive) =>
+  isActive ? 'Bạn có chắc muốn tạm ẩn mục này không?' : 'Bạn có chắc muốn hiện lại mục này không?'
 
 function ProductManagementPage() {
   const [products, setProducts] = useState(fallbackProducts)
@@ -97,7 +99,7 @@ function ProductManagementPage() {
     if (!silent) setIsLoading(true)
 
     try {
-      const [apiProducts, apiCategories] = await Promise.all([getProducts(), getCategories()])
+      const [apiProducts, apiCategories] = await Promise.all([getManageProducts(), getManageCategories()])
       setProducts(apiProducts)
       setCategories(apiCategories.length > 0 ? apiCategories : fallbackCategories)
       setHasApiError(false)
@@ -111,7 +113,7 @@ function ProductManagementPage() {
   }, [])
 
   useEffect(() => {
-    loadProducts()
+    Promise.resolve().then(() => loadProducts())
   }, [loadProducts])
 
   const categoryOptions = useMemo(() => {
@@ -162,7 +164,7 @@ function ProductManagementPage() {
     setIsDetailLoading(true)
     setDetailProduct(product)
     try {
-      setDetailProduct(await getProductById(product.id))
+      setDetailProduct(await getManageProductById(product.id))
     } catch (error) {
       setActionError(error?.message || 'Không thể tải chi tiết sản phẩm từ backend.')
     } finally {
@@ -258,26 +260,13 @@ function ProductManagementPage() {
   }
 
   const handleToggleProduct = async (product) => {
+    if (!window.confirm(getToggleConfirmMessage(product.status))) return
+
     setIsSaving(true)
     setActionError('')
     try {
       await toggleProduct(product.id)
       setActionMessage(product.status ? 'Đã ẩn sản phẩm.' : 'Đã hiện sản phẩm.')
-      await loadProducts()
-    } catch (error) {
-      setActionError(error?.message || 'Không kết nối được backend.')
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  const handleDeleteProduct = async (product) => {
-    if (!window.confirm('Bạn có chắc muốn xóa mềm sản phẩm này?')) return
-    setIsSaving(true)
-    setActionError('')
-    try {
-      await deleteProduct(product.id)
-      setActionMessage('Đã xóa mềm sản phẩm.')
       await loadProducts()
     } catch (error) {
       setActionError(error?.message || 'Không kết nối được backend.')
@@ -292,7 +281,7 @@ function ProductManagementPage() {
     try {
       setVariants(await getVariantsByProduct(product.id))
     } catch (error) {
-      setVariants(product.variants || [])
+      setVariants([])
       setActionError(error?.message || 'Không thể tải biến thể từ backend.')
     } finally {
       setIsDetailLoading(false)
@@ -380,27 +369,13 @@ function ProductManagementPage() {
   }
 
   const handleToggleVariant = async (variant) => {
+    if (!window.confirm(getToggleConfirmMessage(variant.status))) return
+
     setIsSaving(true)
     setActionError('')
     try {
       await toggleVariant(variant.id)
       setActionMessage(variant.status ? 'Đã ẩn biến thể.' : 'Đã hiện biến thể.')
-      await loadVariants(variantProduct)
-      await loadProducts({ silent: true })
-    } catch (error) {
-      setActionError(error?.message || 'Không kết nối được backend.')
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  const handleDeleteVariant = async (variant) => {
-    if (!window.confirm('Bạn có chắc muốn xóa mềm biến thể này?')) return
-    setIsSaving(true)
-    setActionError('')
-    try {
-      await deleteVariant(variant.id)
-      setActionMessage('Đã xóa mềm biến thể.')
       await loadVariants(variantProduct)
       await loadProducts({ silent: true })
     } catch (error) {
@@ -448,7 +423,13 @@ function ProductManagementPage() {
           <div className="product-table-head"><span>Ảnh</span><span>Tên sản phẩm</span><span>Danh mục</span><span>Tỉnh/thành</span><span>Vùng miền</span><span>Giá niêm yết</span><span>Giá thấp nhất</span><span>Tồn kho</span><span>Biến thể</span><span>Trạng thái</span><span>Thao tác</span></div>
           {filteredProducts.map((product) => (
             <article className="product-table-row" key={product.id}>
-              <div className="staff-product-image">{product.imageUrl ? <img src={product.imageUrl} alt={product.name} /> : product.image}</div>
+              <div className="staff-product-image">
+                <img
+                  src={getImageUrl(product.hinhAnh || product.imageUrl || product.image)}
+                  alt={product.name}
+                  onError={handleImageError}
+                />
+              </div>
               <div className="staff-product-name"><strong>{product.name}</strong><span>{product.slug}</span></div>
               <span>{product.categoryName || 'Đang cập nhật'}</span>
               <span>{product.province || 'Đang cập nhật'}</span>
@@ -462,8 +443,7 @@ function ProductManagementPage() {
                 <button type="button" disabled={isSaving} onClick={() => loadProductDetail(product)}>Xem chi tiết</button>
                 <button type="button" disabled={isSaving} onClick={() => openVariantModal(product)}>Quản lý biến thể</button>
                 <button type="button" disabled={isSaving} onClick={() => openEditProduct(product)}>Sửa</button>
-                <button type="button" disabled={isSaving} onClick={() => handleToggleProduct(product)}>{product.status ? 'Ẩn' : 'Hiện'}</button>
-                <button type="button" disabled={isSaving} onClick={() => handleDeleteProduct(product)}>Xóa</button>
+                <button type="button" disabled={isSaving} onClick={() => handleToggleProduct(product)}>{product.status ? 'Tạm ẩn' : 'Hiện lại'}</button>
               </div>
             </article>
           ))}
@@ -533,7 +513,7 @@ function ProductManagementPage() {
               {variants.map((variant) => (
                 <article className="variant-table-row" key={variant.id}>
                   <strong>{variant.id}</strong><span>{variant.weight || 'Đang cập nhật'}</span><span>{variant.packaging || variant.label}</span><span>{formatCurrency(variant.price)}</span><span>{variant.stock}</span><span>{formatDate(variant.expiryDate)}</span><span className={`product-status product-status-${variant.status ? 'active' : 'hidden'}`}>{variant.status ? 'Đang bán' : 'Tạm ẩn'}</span>
-                  <div className="product-actions"><button type="button" disabled={isSaving} onClick={() => openEditVariant(variant)}>Sửa</button><button type="button" disabled={isSaving} onClick={() => handleToggleVariant(variant)}>{variant.status ? 'Ẩn' : 'Hiện'}</button><button type="button" disabled={isSaving} onClick={() => handleDeleteVariant(variant)}>Xóa</button></div>
+                  <div className="product-actions"><button type="button" disabled={isSaving} onClick={() => openEditVariant(variant)}>Sửa</button><button type="button" disabled={isSaving} onClick={() => handleToggleVariant(variant)}>{variant.status ? 'Tạm ẩn' : 'Hiện lại'}</button></div>
                 </article>
               ))}
               {variants.length === 0 ? <p className="variant-empty">Sản phẩm này chưa có biến thể.</p> : null}

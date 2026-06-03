@@ -8,6 +8,8 @@ import java.util.Optional;
 
 public interface DanhMucRepository extends JpaRepository<DanhMuc, Integer> {
 
+    List<DanhMuc> findAllByOrderByThuTuHienThiAsc();
+
     List<DanhMuc> findByTrangThaiTrueOrderByThuTuHienThiAsc();
 
     List<DanhMuc> findByDanhMucChaIsNullAndTrangThaiTrueOrderByThuTuHienThiAsc();

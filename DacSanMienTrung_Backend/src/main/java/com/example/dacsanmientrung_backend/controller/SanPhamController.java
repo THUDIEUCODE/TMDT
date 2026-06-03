@@ -38,6 +38,22 @@ public class SanPhamController {
         return sanPhamService.getProducts(keyword, categoryId, province, minPrice, maxPrice);
     }
 
+    @GetMapping("/manage")
+    public List<SanPhamResponse> getManageProducts(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Integer categoryId,
+            @RequestParam(required = false) String province,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice
+    ) {
+        return sanPhamService.getManageProducts(keyword, categoryId, province, minPrice, maxPrice);
+    }
+
+    @GetMapping("/manage/{id}")
+    public SanPhamDetailResponse getManageProductById(@PathVariable Integer id) {
+        return sanPhamService.getManageProductById(id);
+    }
+
     @GetMapping("/{id}")
     public SanPhamDetailResponse getProductById(@PathVariable Integer id) {
         return sanPhamService.getProductById(id);

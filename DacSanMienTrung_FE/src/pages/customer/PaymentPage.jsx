@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { clearPendingCombo, getPendingCombo, markComboOrdered } from '../../services/comboService'
 import { createOrder } from '../../services/orderService'
 import { getCurrentUserId } from '../../utils/authStorage'
 
@@ -27,9 +28,11 @@ function PaymentPage() {
     () => location.state?.checkoutData || getStoredCheckout(),
     [location.state],
   )
+  const pendingCombo = getPendingCombo()
   const [paymentMethod, setPaymentMethod] = useState('COD')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [orderError, setOrderError] = useState('')
+  const [orderWarning, setOrderWarning] = useState('')
 
   useEffect(() => {
     if (!checkoutData) {
@@ -43,6 +46,7 @@ function PaymentPage() {
 
   const submitOrder = async () => {
     setOrderError('')
+    setOrderWarning('')
 
     try {
       const maNguoiDung = getCurrentUserId()
@@ -53,6 +57,10 @@ function PaymentPage() {
       }
 
       setIsSubmitting(true)
+      const baseNote = checkoutData.ghiChuGiaoHang || ''
+      const comboNote = pendingCombo.id
+        ? `Đặt từ combo: ${pendingCombo.name}. Lời nhắn: ${pendingCombo.message}. ${baseNote}`.trim()
+        : baseNote
       const order = await createOrder({
         maNguoiDung,
         hoTenNguoiNhan: checkoutData.hoTenNguoiNhan,
@@ -60,18 +68,33 @@ function PaymentPage() {
         diaChiGiaoHang: checkoutData.diaChiGiaoHang,
         quanHuyen: checkoutData.quanHuyen,
         tinhThanhGiaoHang: checkoutData.tinhThanhGiaoHang,
-        ghiChuGiaoHang: checkoutData.ghiChuGiaoHang,
+        ghiChuGiaoHang: comboNote,
         phuongThucThanhToan: paymentMethod,
         maVoucher: checkoutData.maVoucher,
         phiVanChuyen: checkoutData.phiVanChuyen,
-        ghiChu: checkoutData.ghiChuGiaoHang,
+        ghiChu: comboNote,
       })
 
-      localStorage.setItem(latestOrderStorageKey, JSON.stringify(order))
+      if (pendingCombo.id) {
+        try {
+          await markComboOrdered(pendingCombo.id)
+        } catch (error) {
+          setOrderWarning(error?.message || 'Đơn hàng đã tạo, nhưng chưa cập nhật được trạng thái combo.')
+        }
+        clearPendingCombo()
+      }
+
+      const orderWithVoucher = {
+        ...order,
+        voucherCode: order.voucherCode || checkoutData.voucherCode || '',
+        maCodeVoucher: order.maCodeVoucher || checkoutData.voucherCode || '',
+      }
+
+      localStorage.setItem(latestOrderStorageKey, JSON.stringify(orderWithVoucher))
       localStorage.removeItem(checkoutStorageKey)
 
-      const orderId = order.code || order.id
-      navigate(`/order-success?orderId=${encodeURIComponent(orderId)}`, { state: { order } })
+      const orderId = orderWithVoucher.code || orderWithVoucher.id
+      navigate(`/order-success?orderId=${encodeURIComponent(orderId)}`, { state: { order: orderWithVoucher } })
     } catch (error) {
       setOrderError(
         error?.message ||
@@ -185,6 +208,12 @@ function PaymentPage() {
               <span>Giảm giá</span>
               <strong>-{formatCurrency(checkoutData.tienGiam)}</strong>
             </div>
+            {checkoutData.maVoucher ? (
+              <div>
+                <span>Voucher</span>
+                <strong>{checkoutData.voucherCode || checkoutData.maVoucher}</strong>
+              </div>
+            ) : null}
             <div>
               <span>Phí vận chuyển</span>
               <strong>{formatCurrency(checkoutData.phiVanChuyen)}</strong>
@@ -196,6 +225,7 @@ function PaymentPage() {
           </div>
 
           {orderError ? <p className="form-error">{orderError}</p> : null}
+          {orderWarning ? <p className="form-success">{orderWarning}</p> : null}
 
           <div className="payment-actions">
             <Link className="button secondary" to="/checkout">

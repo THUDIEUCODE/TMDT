@@ -38,7 +38,7 @@ public class BlogController {
 
     @GetMapping("/{maBlog}")
     public BlogDetailResponse getBlogById(@PathVariable Integer maBlog) {
-        return blogService.getPublicBlogById(maBlog);
+        return blogService.getBlogById(maBlog);
     }
 
     @GetMapping("/topic/{chuDe}")

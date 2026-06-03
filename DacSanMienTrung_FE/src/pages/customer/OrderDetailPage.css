@@ -218,6 +218,34 @@
   margin: 0;
 }
 
+.order-review-summary {
+  display: grid;
+  gap: 5px;
+}
+
+.order-review-summary strong {
+  color: var(--color-orange);
+  letter-spacing: 0;
+}
+
+.review-status-badge {
+  width: fit-content;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.review-status-badge.pending {
+  color: #8a4d00;
+  background: #fff2c6;
+}
+
+.review-status-badge.approved {
+  color: #166534;
+  background: #dcfce7;
+}
+
 .order-item-actions small,
 .order-item-actions span {
   color: var(--color-muted);

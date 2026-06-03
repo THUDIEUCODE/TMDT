@@ -1,10 +1,10 @@
 package com.example.dacsanmientrung_backend.controller;
 
 import com.example.dacsanmientrung_backend.dto.request.CreateReviewRequest;
-import com.example.dacsanmientrung_backend.dto.request.ReviewModerationRequest;
 import com.example.dacsanmientrung_backend.dto.response.ReviewResponse;
 import com.example.dacsanmientrung_backend.service.ReviewService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -33,8 +34,8 @@ public class ReviewController {
     }
 
     @GetMapping("/product/{maSanPham}")
-    public List<ReviewResponse> getApprovedReviewsByProduct(@PathVariable Integer maSanPham) {
-        return reviewService.getApprovedReviewsByProduct(maSanPham);
+    public List<ReviewResponse> getReviewsByProduct(@PathVariable Integer maSanPham) {
+        return reviewService.getReviewsByProduct(maSanPham);
     }
 
     @GetMapping("/user/{maNguoiDung}")
@@ -52,23 +53,18 @@ public class ReviewController {
     }
 
     @PutMapping("/{maChiTietDonHang}/approve")
-    public ReviewResponse approveReview(
-            @PathVariable Integer maChiTietDonHang,
-            @RequestBody(required = false) ReviewModerationRequest request
-    ) {
+    public ReviewResponse approveReview(@PathVariable Integer maChiTietDonHang) {
         return reviewService.approveReview(maChiTietDonHang);
     }
 
     @PutMapping("/{maChiTietDonHang}/hide")
-    public ReviewResponse hideReview(
-            @PathVariable Integer maChiTietDonHang,
-            @RequestBody(required = false) ReviewModerationRequest request
-    ) {
+    public ReviewResponse hideReview(@PathVariable Integer maChiTietDonHang) {
         return reviewService.hideReview(maChiTietDonHang);
     }
 
     @DeleteMapping("/{maChiTietDonHang}")
-    public ReviewResponse deleteReview(@PathVariable Integer maChiTietDonHang) {
-        return reviewService.deleteReview(maChiTietDonHang);
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteReview(@PathVariable Integer maChiTietDonHang) {
+        reviewService.deleteReview(maChiTietDonHang);
     }
 }

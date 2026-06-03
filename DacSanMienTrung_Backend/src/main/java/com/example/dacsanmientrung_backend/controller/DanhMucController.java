@@ -29,6 +29,16 @@ public class DanhMucController {
         return danhMucService.getAllActiveCategories();
     }
 
+    @GetMapping("/manage")
+    public List<DanhMucResponse> getManageCategories() {
+        return danhMucService.getManageCategories();
+    }
+
+    @GetMapping("/manage/{id}")
+    public DanhMucResponse getManageCategoryById(@PathVariable Integer id) {
+        return danhMucService.getManageCategoryById(id);
+    }
+
     @GetMapping("/root")
     public List<DanhMucResponse> getRootCategories() {
         return danhMucService.getRootCategories();

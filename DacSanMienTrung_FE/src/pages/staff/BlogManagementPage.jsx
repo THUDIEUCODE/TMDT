@@ -1,55 +1,59 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { blogCategoryLabels, blogStatusLabels, mockBlogs } from '../../data/mockBlogs'
-import { mockProducts } from '../../data/mockProducts'
+import {
+  createBlog,
+  deleteBlog,
+  getAllBlogsForAdmin,
+  hideBlog,
+  mapBlogFromApi,
+  publishBlog,
+  updateBlog,
+} from '../../services/blogService'
 import './BlogManagementPage.css'
 
-const productNames = {
-  'me-xung-hue': 'Mè xửng Huế',
-  'mam-ruoc-hue': 'Mắm ruốc Huế',
-  'muc-rim-me-da-nang': 'Mực rim me Đà Nẵng',
-  'banh-kho-me-quang-nam': 'Bánh khô mè Quảng Nam',
-  'toi-ly-son': 'Tỏi Lý Sơn',
-  'cha-bo-da-nang': 'Chả bò Đà Nẵng',
-  'nuoc-mam-nam-o': 'Nước mắm Nam Ô',
-  'ca-kho-nha-trang': 'Cá khô Nha Trang',
-  'yen-sao-khanh-hoa': 'Yến sào Khánh Hòa',
-  'banh-trang-dai-loc': 'Bánh tráng Đại Lộc',
-  'mi-quang-kho': 'Mì Quảng khô',
-  'tra-cung-dinh-hue': 'Trà cung đình Huế',
-  'hop-qua-mien-trung': 'Hộp quà đặc sản miền Trung',
-}
+const fallbackBlogs = mockBlogs.map(mapBlogFromApi)
 
-const productOptions = mockProducts.map((product) => ({
-  id: product.id,
-  name: productNames[product.id] || product.name,
-}))
+const statusOptions = {
+  published: blogStatusLabels.published || 'Đã xuất bản',
+  draft: blogStatusLabels.draft || 'Bản nháp',
+  hidden: blogStatusLabels.hidden || 'Đã ẩn',
+}
 
 const emptyForm = {
-  title: '',
-  slug: '',
-  category: 'foodCulture',
-  thumbnail: '',
-  summary: '',
-  content: '',
-  author: '',
-  relatedProductIds: [],
-  status: 'draft',
+  maTacGia: '',
+  tieuDe: '',
+  moTa: '',
+  noiDung: '',
+  hinhAnh: '',
+  chuDe: 'foodCulture',
+  tenTinh: '',
+  trangThai: 'draft',
+  relatedProductIds: '',
 }
 
-const createSlug = (value) =>
-  value
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/g, 'd')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+const getTopicLabel = (blog) => blogCategoryLabels[blog.category] || blog.topic || blog.category || 'Đang cập nhật'
 
-const today = () => new Date().toISOString().slice(0, 10)
+const getStatusLabel = (status) => statusOptions[status] || status || 'Đang cập nhật'
+
+const buildBlogPayload = (formData) => ({
+  maTacGia: formData.maTacGia === '' ? null : Number(formData.maTacGia),
+  tieuDe: formData.tieuDe.trim(),
+  moTa: formData.moTa.trim(),
+  noiDung: formData.noiDung.trim(),
+  hinhAnh: formData.hinhAnh.trim(),
+  chuDe: formData.chuDe.trim(),
+  tenTinh: formData.tenTinh.trim(),
+  trangThai: formData.trangThai,
+  relatedProductIds: formData.relatedProductIds
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((item) => Number(item))
+    .filter((item) => Number.isFinite(item)),
+})
 
 function BlogManagementPage() {
-  const [blogs, setBlogs] = useState(mockBlogs)
+  const [blogs, setBlogs] = useState(fallbackBlogs)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
@@ -57,13 +61,53 @@ function BlogManagementPage() {
   const [editingBlogId, setEditingBlogId] = useState(null)
   const [formData, setFormData] = useState(emptyForm)
   const [detailBlog, setDetailBlog] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [hasApiError, setHasApiError] = useState(false)
+  const [actionMessage, setActionMessage] = useState('')
+  const [actionError, setActionError] = useState('')
+
+  const loadBlogs = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setIsLoading(true)
+
+    try {
+      const apiBlogs = await getAllBlogsForAdmin()
+      setBlogs(apiBlogs)
+      setHasApiError(false)
+    } catch (error) {
+      setBlogs(fallbackBlogs)
+      setHasApiError(true)
+      setActionError(error?.message || '')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    const loadTimer = window.setTimeout(() => {
+      loadBlogs()
+    }, 0)
+
+    return () => {
+      window.clearTimeout(loadTimer)
+    }
+  }, [loadBlogs])
+
+  const topicOptions = useMemo(() => {
+    const options = new Map(Object.entries(blogCategoryLabels))
+    blogs.forEach((blog) => {
+      if (blog.topic) options.set(blog.topic, blog.topic)
+      if (blog.category) options.set(blog.category, blogCategoryLabels[blog.category] || blog.category)
+    })
+    return Array.from(options.entries()).map(([value, label]) => ({ value, label }))
+  }, [blogs])
 
   const stats = useMemo(() => {
     return blogs.reduce(
       (result, blog) => {
         result.total += 1
-        result[blog.status] += 1
-        result.views += blog.views
+        result[blog.status] = Number(result[blog.status] || 0) + 1
+        result.views += Number(blog.views || 0)
         return result
       },
       { total: 0, published: 0, draft: 0, hidden: 0, views: 0 },
@@ -74,34 +118,42 @@ function BlogManagementPage() {
     const normalizedSearch = searchTerm.trim().toLowerCase()
 
     return blogs.filter((blog) => {
-      const matchesSearch =
-        !normalizedSearch || blog.title.toLowerCase().includes(normalizedSearch)
+      const searchable = [blog.title, blog.description, blog.summary, blog.topic, blog.province]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+      const matchesSearch = !normalizedSearch || searchable.includes(normalizedSearch)
       const matchesStatus = statusFilter === 'all' || blog.status === statusFilter
-      const matchesCategory = categoryFilter === 'all' || blog.category === categoryFilter
+      const matchesCategory =
+        categoryFilter === 'all' || blog.category === categoryFilter || blog.topic === categoryFilter
 
       return matchesSearch && matchesStatus && matchesCategory
     })
   }, [blogs, categoryFilter, searchTerm, statusFilter])
 
   const openAddModal = () => {
+    setActionError('')
+    setActionMessage('')
     setModalMode('add')
     setEditingBlogId(null)
     setFormData(emptyForm)
   }
 
   const openEditModal = (blog) => {
+    setActionError('')
+    setActionMessage('')
     setModalMode('edit')
     setEditingBlogId(blog.id)
     setFormData({
-      title: blog.title,
-      slug: blog.slug,
-      category: blog.category,
-      thumbnail: blog.thumbnail,
-      summary: blog.summary,
-      content: blog.content,
-      author: blog.author,
-      relatedProductIds: blog.relatedProductIds,
-      status: blog.status,
+      maTacGia: blog.authorId === null || blog.authorId === undefined ? '' : String(blog.authorId),
+      tieuDe: blog.title || '',
+      moTa: blog.description || blog.summary || '',
+      noiDung: blog.content || '',
+      hinhAnh: blog.image || '',
+      chuDe: blog.category || blog.topic || '',
+      tenTinh: blog.province || '',
+      trangThai: blog.status || 'draft',
+      relatedProductIds: (blog.relatedProductIds || []).join(','),
     })
   }
 
@@ -113,87 +165,75 @@ function BlogManagementPage() {
 
   const handleFormChange = (event) => {
     const { name, value } = event.target
-    setFormData((current) => ({
-      ...current,
-      [name]: value,
-      slug: name === 'title' && !current.slug ? createSlug(value) : name === 'slug' ? value : current.slug,
-    }))
+    setFormData((current) => ({ ...current, [name]: value }))
   }
 
-  const toggleRelatedProduct = (productId) => {
-    setFormData((current) => ({
-      ...current,
-      relatedProductIds: current.relatedProductIds.includes(productId)
-        ? current.relatedProductIds.filter((id) => id !== productId)
-        : [...current.relatedProductIds, productId],
-    }))
-  }
-
-  const saveBlog = (event) => {
+  const saveBlog = async (event) => {
     event.preventDefault()
-    const slug = createSlug(formData.slug || formData.title)
-    const nextBlogData = {
-      title: formData.title.trim(),
-      slug,
-      category: formData.category,
-      thumbnail: formData.thumbnail.trim() || formData.title.slice(0, 3).toUpperCase(),
-      summary: formData.summary.trim(),
-      content: formData.content.trim(),
-      author: formData.author.trim(),
-      relatedProductIds: formData.relatedProductIds,
-      status: formData.status,
-      description: formData.summary.trim(),
-      image: formData.thumbnail.trim() || formData.title.slice(0, 3).toUpperCase(),
-      topic: blogCategoryLabels[formData.category],
-      publishedDate: today(),
-    }
 
-    if (modalMode === 'edit') {
-      setBlogs((currentBlogs) =>
-        currentBlogs.map((blog) =>
-          blog.id === editingBlogId ? { ...blog, ...nextBlogData } : blog,
-        ),
-      )
-    } else {
-      setBlogs((currentBlogs) => [
-        {
-          ...nextBlogData,
-          id: `${slug}-${Date.now()}`,
-          createdAt: today(),
-          views: 0,
-          province: 'Miền Trung',
-        },
-        ...currentBlogs,
-      ])
-    }
-
-    closeFormModal()
-  }
-
-  const publishBlog = (blogId) => {
-    setBlogs((currentBlogs) =>
-      currentBlogs.map((blog) => (blog.id === blogId ? { ...blog, status: 'published' } : blog)),
-    )
-  }
-
-  const hideBlog = (blogId) => {
-    setBlogs((currentBlogs) =>
-      currentBlogs.map((blog) => (blog.id === blogId ? { ...blog, status: 'hidden' } : blog)),
-    )
-  }
-
-  const deleteBlog = (blogId) => {
-    const confirmed = window.confirm('Bạn có chắc muốn xóa bài viết này?')
-    if (!confirmed) {
+    if (!formData.tieuDe.trim()) {
+      setActionError('Tiêu đề không được rỗng.')
       return
     }
-    setBlogs((currentBlogs) => currentBlogs.filter((blog) => blog.id !== blogId))
+
+    setIsSaving(true)
+    setActionError('')
+
+    try {
+      if (modalMode === 'edit') {
+        await updateBlog(editingBlogId, buildBlogPayload(formData))
+        setActionMessage('Đã cập nhật bài viết.')
+      } else {
+        await createBlog(buildBlogPayload(formData))
+        setActionMessage('Đã thêm bài viết.')
+      }
+
+      closeFormModal()
+      await loadBlogs({ silent: true })
+    } catch (error) {
+      setActionError(error?.message || 'Không kết nối được backend.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
-  const getRelatedProducts = (blog) =>
-    blog.relatedProductIds
-      .map((productId) => productOptions.find((product) => product.id === productId))
-      .filter(Boolean)
+  const runBlogAction = async (blog, action) => {
+    const confirmMessage =
+      action === 'delete'
+        ? 'Bạn có chắc muốn xóa mềm bài viết này?'
+        : action === 'hide'
+          ? 'Bạn có chắc muốn ẩn bài viết này?'
+          : 'Bạn có chắc muốn xuất bản bài viết này?'
+
+    if (!window.confirm(confirmMessage)) return
+
+    setIsSaving(true)
+    setActionError('')
+
+    try {
+      if (action === 'publish') {
+        await publishBlog(blog.id)
+        setActionMessage('Đã xuất bản bài viết.')
+      }
+
+      if (action === 'hide') {
+        await hideBlog(blog.id)
+        setActionMessage('Đã ẩn bài viết.')
+      }
+
+      if (action === 'delete') {
+        await deleteBlog(blog.id)
+        setActionMessage('Đã xóa mềm bài viết.')
+      }
+
+      if (detailBlog?.id === blog.id) setDetailBlog(null)
+      await loadBlogs({ silent: true })
+    } catch (error) {
+      setActionError(error?.message || 'Không kết nối được backend.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   return (
     <div className="blog-management-page">
@@ -209,27 +249,17 @@ function BlogManagementPage() {
       </section>
 
       <section className="blog-stat-grid">
-        <article>
-          <span>Tổng bài viết</span>
-          <strong>{stats.total}</strong>
-        </article>
-        <article>
-          <span>Đã xuất bản</span>
-          <strong>{stats.published}</strong>
-        </article>
-        <article>
-          <span>Bản nháp</span>
-          <strong>{stats.draft}</strong>
-        </article>
-        <article>
-          <span>Đã ẩn</span>
-          <strong>{stats.hidden}</strong>
-        </article>
-        <article>
-          <span>Tổng lượt xem</span>
-          <strong>{stats.views.toLocaleString('vi-VN')}</strong>
-        </article>
+        <article><span>Tổng bài viết</span><strong>{stats.total}</strong></article>
+        <article><span>Đã xuất bản</span><strong>{stats.published}</strong></article>
+        <article><span>Bản nháp</span><strong>{stats.draft}</strong></article>
+        <article><span>Đã ẩn</span><strong>{stats.hidden}</strong></article>
+        <article><span>Tổng lượt xem</span><strong>{stats.views.toLocaleString('vi-VN')}</strong></article>
       </section>
+
+      {isLoading ? <p className="product-result-summary">Đang tải bài viết...</p> : null}
+      {hasApiError ? <p className="product-result-summary">Không kết nối được backend, đang dùng dữ liệu mẫu.</p> : null}
+      {actionMessage ? <p className="form-success">{actionMessage}</p> : null}
+      {actionError && !hasApiError ? <p className="form-error">{actionError}</p> : null}
 
       <section className="blog-filter-panel">
         <label>
@@ -237,28 +267,24 @@ function BlogManagementPage() {
           <input
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
-            placeholder="Nhập tiêu đề bài viết"
+            placeholder="Nhập tiêu đề, mô tả hoặc chủ đề"
           />
         </label>
         <label>
           Trạng thái
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
             <option value="all">Tất cả</option>
-            {Object.entries(blogStatusLabels).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
+            {Object.entries(statusOptions).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
             ))}
           </select>
         </label>
         <label>
-          Chuyên mục
+          Chủ đề
           <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
             <option value="all">Tất cả</option>
-            {Object.entries(blogCategoryLabels).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
+            {topicOptions.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
         </label>
@@ -267,19 +293,12 @@ function BlogManagementPage() {
       <section className="blog-table-card">
         <div className="blog-table-summary">
           <strong>{filteredBlogs.length} bài viết</strong>
-          <span>Dữ liệu mock, thao tác cập nhật bằng state nội bộ.</span>
+          <span>Dữ liệu được tải từ backend khi kết nối thành công.</span>
         </div>
 
         <div className="blog-management-table">
           <div className="blog-table-head">
-            <span>Ảnh</span>
-            <span>Tiêu đề</span>
-            <span>Chuyên mục</span>
-            <span>Tác giả</span>
-            <span>Ngày tạo</span>
-            <span>Lượt xem</span>
-            <span>Trạng thái</span>
-            <span>Thao tác</span>
+            <span>Ảnh</span><span>Tiêu đề</span><span>Chủ đề</span><span>Tác giả</span><span>Ngày tạo</span><span>Lượt xem</span><span>Trạng thái</span><span>Thao tác</span>
           </div>
 
           {filteredBlogs.map((blog) => (
@@ -287,38 +306,32 @@ function BlogManagementPage() {
               <div className="blog-thumb">{blog.thumbnail}</div>
               <div className="blog-title-cell">
                 <strong>{blog.title}</strong>
-                <span>{blog.slug}</span>
+                <span>{blog.description || blog.slug}</span>
               </div>
-              <span>{blogCategoryLabels[blog.category]}</span>
-              <span>{blog.author}</span>
-              <span>{blog.createdAt}</span>
-              <span>{blog.views.toLocaleString('vi-VN')}</span>
-              <span className={`blog-status blog-status-${blog.status}`}>
-                {blogStatusLabels[blog.status]}
-              </span>
+              <span>{getTopicLabel(blog)}</span>
+              <span>{blog.author || blog.authorId || 'Đang cập nhật'}</span>
+              <span>{blog.createdAt || blog.publishedDate || 'Đang cập nhật'}</span>
+              <span>{Number(blog.views || 0).toLocaleString('vi-VN')}</span>
+              <span className={`blog-status blog-status-${blog.status}`}>{getStatusLabel(blog.status)}</span>
               <div className="blog-actions">
-                <button type="button" onClick={() => setDetailBlog(blog)}>
-                  Xem chi tiết
-                </button>
-                <button type="button" onClick={() => openEditModal(blog)}>
-                  Sửa
-                </button>
+                <button type="button" disabled={isSaving} onClick={() => setDetailBlog(blog)}>Xem chi tiết</button>
+                <button type="button" disabled={isSaving} onClick={() => openEditModal(blog)}>Sửa</button>
                 {blog.status !== 'published' ? (
-                  <button type="button" onClick={() => publishBlog(blog.id)}>
-                    Xuất bản
-                  </button>
+                  <button type="button" disabled={isSaving} onClick={() => runBlogAction(blog, 'publish')}>Xuất bản</button>
                 ) : null}
                 {blog.status !== 'hidden' ? (
-                  <button type="button" onClick={() => hideBlog(blog.id)}>
-                    Ẩn
-                  </button>
+                  <button type="button" disabled={isSaving} onClick={() => runBlogAction(blog, 'hide')}>Ẩn</button>
                 ) : null}
-                <button className="danger" type="button" onClick={() => deleteBlog(blog.id)}>
-                  Xóa
-                </button>
+                <button className="danger" type="button" disabled={isSaving} onClick={() => runBlogAction(blog, 'delete')}>Xóa</button>
               </div>
             </article>
           ))}
+
+          {filteredBlogs.length === 0 && !isLoading ? (
+            <section className="empty-products">
+              <h2>Chưa có bài viết phù hợp</h2>
+            </section>
+          ) : null}
         </div>
       </section>
 
@@ -331,86 +344,27 @@ function BlogManagementPage() {
             </div>
 
             <div className="blog-form-grid">
-              <label>
-                Tiêu đề bài viết
-                <input required name="title" value={formData.title} onChange={handleFormChange} />
-              </label>
-              <label>
-                Slug
-                <input required name="slug" value={formData.slug} onChange={handleFormChange} />
-              </label>
-              <label>
-                Chuyên mục
-                <select name="category" value={formData.category} onChange={handleFormChange}>
-                  {Object.entries(blogCategoryLabels).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Ảnh đại diện URL hoặc text
-                <input name="thumbnail" value={formData.thumbnail} onChange={handleFormChange} />
-              </label>
-              <label>
-                Tác giả
-                <input required name="author" value={formData.author} onChange={handleFormChange} />
-              </label>
+              <label>Mã tác giả<input name="maTacGia" type="number" value={formData.maTacGia} onChange={handleFormChange} /></label>
+              <label>Tiêu đề<input required name="tieuDe" value={formData.tieuDe} onChange={handleFormChange} /></label>
+              <label>Hình ảnh<input name="hinhAnh" value={formData.hinhAnh} onChange={handleFormChange} /></label>
+              <label>Chủ đề<input name="chuDe" value={formData.chuDe} onChange={handleFormChange} /></label>
+              <label>Tỉnh/thành<input name="tenTinh" value={formData.tenTinh} onChange={handleFormChange} /></label>
               <label>
                 Trạng thái
-                <select name="status" value={formData.status} onChange={handleFormChange}>
-                  {Object.entries(blogStatusLabels).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
+                <select name="trangThai" value={formData.trangThai} onChange={handleFormChange}>
+                  {Object.entries(statusOptions).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
                   ))}
                 </select>
               </label>
-              <label className="blog-form-full">
-                Mô tả ngắn
-                <textarea
-                  name="summary"
-                  rows="3"
-                  value={formData.summary}
-                  onChange={handleFormChange}
-                />
-              </label>
-              <label className="blog-form-full">
-                Nội dung bài viết
-                <textarea
-                  className="blog-content-input"
-                  name="content"
-                  rows="8"
-                  value={formData.content}
-                  onChange={handleFormChange}
-                />
-              </label>
-            </div>
-
-            <div className="related-product-picker">
-              <h3>Sản phẩm liên quan</h3>
-              <div>
-                {productOptions.map((product) => (
-                  <label key={product.id}>
-                    <input
-                      type="checkbox"
-                      checked={formData.relatedProductIds.includes(product.id)}
-                      onChange={() => toggleRelatedProduct(product.id)}
-                    />
-                    <span>{product.name}</span>
-                  </label>
-                ))}
-              </div>
+              <label className="blog-form-full">Mô tả<textarea name="moTa" rows="3" value={formData.moTa} onChange={handleFormChange} /></label>
+              <label className="blog-form-full">Nội dung<textarea className="blog-content-input" name="noiDung" rows="8" value={formData.noiDung} onChange={handleFormChange} /></label>
+              <label className="blog-form-full">relatedProductIds<input name="relatedProductIds" value={formData.relatedProductIds} onChange={handleFormChange} placeholder="1,2,3" /></label>
             </div>
 
             <div className="blog-modal-actions">
-              <button type="button" onClick={closeFormModal}>
-                Hủy
-              </button>
-              <button className="button" type="submit">
-                Lưu
-              </button>
+              <button type="button" disabled={isSaving} onClick={closeFormModal}>Hủy</button>
+              <button className="button" type="submit" disabled={isSaving}>{isSaving ? 'Đang lưu...' : 'Lưu'}</button>
             </div>
           </form>
         </div>
@@ -420,33 +374,30 @@ function BlogManagementPage() {
         <div className="blog-modal-backdrop" role="presentation">
           <section className="blog-modal blog-detail-modal">
             <div className="blog-modal-heading">
-              <span>{blogStatusLabels[detailBlog.status]}</span>
+              <span>{getStatusLabel(detailBlog.status)}</span>
               <h2>{detailBlog.title}</h2>
             </div>
             <div className="blog-detail-meta">
-              <span>{blogCategoryLabels[detailBlog.category]}</span>
-              <span>{detailBlog.author}</span>
-              <span>{detailBlog.createdAt}</span>
-              <span>{detailBlog.views.toLocaleString('vi-VN')} lượt xem</span>
+              <span>{getTopicLabel(detailBlog)}</span>
+              <span>{detailBlog.province || 'Đang cập nhật'}</span>
+              <span>{detailBlog.author || detailBlog.authorId || 'Đang cập nhật'}</span>
+              <span>{detailBlog.createdAt || detailBlog.publishedDate || 'Đang cập nhật'}</span>
+              <span>{Number(detailBlog.views || 0).toLocaleString('vi-VN')} lượt xem</span>
             </div>
-            <p className="blog-detail-summary">{detailBlog.summary}</p>
+            <p className="blog-detail-summary">{detailBlog.description || detailBlog.summary}</p>
             <p className="blog-detail-content">{detailBlog.content}</p>
             <div className="blog-related-products">
               <h3>Sản phẩm liên quan</h3>
-              {getRelatedProducts(detailBlog).length > 0 ? (
+              {detailBlog.relatedProductIds?.length > 0 ? (
                 <div>
-                  {getRelatedProducts(detailBlog).map((product) => (
-                    <span key={product.id}>{product.name}</span>
-                  ))}
+                  {detailBlog.relatedProductIds.map((productId) => <span key={productId}>{productId}</span>)}
                 </div>
               ) : (
                 <p>Chưa gắn sản phẩm liên quan.</p>
               )}
             </div>
             <div className="blog-modal-actions">
-              <button type="button" onClick={() => setDetailBlog(null)}>
-                Đóng
-              </button>
+              <button type="button" onClick={() => setDetailBlog(null)}>Đóng</button>
             </div>
           </section>
         </div>

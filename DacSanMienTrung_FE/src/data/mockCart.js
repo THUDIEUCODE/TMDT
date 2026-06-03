@@ -36,8 +36,3 @@ export const mockCartItems = [
     stock: 30,
   },
 ]
-
-export const mockCartVoucher = {
-  code: 'MT10',
-  discountAmount: 30000,
-}

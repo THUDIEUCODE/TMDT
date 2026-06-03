@@ -60,6 +60,7 @@ export const mapCartItemFromApi = (apiItem = {}) => {
     name,
     variantName,
     variantLabel: variantName,
+    hinhAnh: apiItem.hinhAnh || apiItem.image || '',
     image: apiItem.hinhAnh || apiItem.image || createInitials(name),
     price,
     quantity,

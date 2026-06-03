@@ -46,6 +46,9 @@ const normalizeMockOrder = (order) => ({
     total: item.total ?? item.price * item.quantity,
     rating: item.rating ?? item.soSao ?? null,
     reviewContent: item.reviewContent ?? item.noiDungDanhGia ?? '',
+    reviewDate: item.reviewDate ?? item.ngayDanhGia ?? '',
+    reviewApproved: Boolean(item.daKiemDuyetDanhGia ?? item.reviewApproved ?? false),
+    daKiemDuyetDanhGia: Boolean(item.daKiemDuyetDanhGia ?? item.reviewApproved ?? false),
   })),
 })
 const fallbackOrders = mockOrders.map(normalizeMockOrder)
@@ -97,7 +100,7 @@ function OrderDetailPage() {
 
   const canCancel = order?.status === 'choXacNhan'
   const canReturn = order?.status === 'daGiao' && (order?.returnStatus === 'khongCo' || !order?.returnStatus)
-  const canReview = order?.status === 'daGiao'
+  const canReview = order?.trangThaiDonHang === 'daGiao' || order?.status === 'daGiao'
   const canConfirmReceived = order?.status === 'dangGiao'
   const canConfirmWallet = order?.paymentMethod === 'vi' && order?.paymentStatus === 'choThanhToan'
   const shouldShowBankTransferGuide = order?.paymentMethod === 'chuyenKhoan' && order?.paymentStatus === 'choThanhToan'
@@ -291,8 +294,8 @@ function OrderDetailPage() {
       })
       setReviewItem(null)
       setReviewForm({ rating: 5, content: '' })
-      setActionMessage('Đã gửi đánh giá sản phẩm.')
       await loadOrder({ silent: true })
+      setActionMessage('Đã gửi đánh giá. Đánh giá sẽ hiển thị sau khi được duyệt.')
     } catch (error) {
       setActionError(error?.message || 'Không thể gửi đánh giá.')
     }
@@ -458,10 +461,14 @@ function OrderDetailPage() {
                   <strong>{formatCurrency(item.total || item.price * item.quantity)}</strong>
                   <div className="order-item-actions">
                     {item.rating ? (
-                      <p>
-                        <strong>{item.rating}/5 sao</strong>
+                      <div className="order-review-summary">
+                        <strong>{'★'.repeat(Number(item.rating))}</strong>
                         <small>{item.reviewContent}</small>
-                      </p>
+                        {item.reviewDate ? <small>{formatDate(item.reviewDate)}</small> : null}
+                        <span className={`review-status-badge ${item.reviewApproved ? 'approved' : 'pending'}`}>
+                          {item.reviewApproved ? 'Đã duyệt' : 'Chờ duyệt'}
+                        </span>
+                      </div>
                     ) : canReview ? (
                       <button
                         type="button"
@@ -625,6 +632,7 @@ function OrderDetailPage() {
             <div className="profile-panel-heading">
               <span>Đánh giá sản phẩm</span>
               <h2>{reviewItem.name}</h2>
+              <p>{reviewItem.variant || reviewItem.variantName || 'Mặc định'}</p>
             </div>
             <label>
               Số sao

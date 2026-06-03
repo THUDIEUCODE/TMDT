@@ -42,6 +42,9 @@ public class DanhMuc {
     @Column(name = "moTa", columnDefinition = "NVARCHAR(MAX)")
     private String moTa;
 
+    @Column(name = "hinhAnh", length = 255)
+    private String hinhAnh;
+
     @Column(name = "thuTuHienThi")
     private Integer thuTuHienThi;
 

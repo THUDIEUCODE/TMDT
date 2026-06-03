@@ -62,7 +62,8 @@ export const mapCategoryFromApi = (apiCategory = {}) => {
     description: category.moTa ?? category.description ?? '',
     displayOrder: Number(category.thuTuHienThi ?? category.displayOrder ?? 0),
     status: normalizeStatus(category.trangThai ?? category.status),
-    image: category.image ?? createInitials(name),
+    hinhAnh: category.hinhAnh ?? category.image ?? '',
+    image: category.hinhAnh ?? category.image ?? createInitials(name),
     productCount: Number(category.soSanPham ?? category.productCount ?? 0),
     childCount: Number(category.soDanhMucCon ?? category.childCount ?? 0),
     subCategories: category.subCategories ?? [],
@@ -74,6 +75,11 @@ export const getCategories = async () => {
   return getArrayPayload(payload).map(mapCategoryFromApi)
 }
 
+export const getManageCategories = async () => {
+  const payload = await getApi('/categories/manage')
+  return getArrayPayload(payload).map(mapCategoryFromApi)
+}
+
 export const getRootCategories = async () => {
   const payload = await getApi('/categories/root')
   return getArrayPayload(payload).map(mapCategoryFromApi)
@@ -81,6 +87,11 @@ export const getRootCategories = async () => {
 
 export const getCategoryById = async (id) => {
   const payload = await getApi(`/categories/${id}`)
+  return mapCategoryFromApi(payload)
+}
+
+export const getManageCategoryById = async (id) => {
+  const payload = await getApi(`/categories/manage/${id}`)
   return mapCategoryFromApi(payload)
 }
 

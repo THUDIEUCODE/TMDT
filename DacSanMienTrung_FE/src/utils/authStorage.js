@@ -81,6 +81,8 @@ export const normalizeUser = (apiUser = {}) => {
     email: user.email ?? '',
     phone: user.soDienThoai ?? user.phone ?? '',
     birthday: user.ngaySinh ?? user.birthday ?? '',
+    diaChi: user.diaChi ?? user.address ?? '',
+    address: user.diaChi ?? user.address ?? '',
     role,
     loyaltyPoints: Number(user.diemTichLuy ?? user.loyaltyPoints ?? 0),
     customerType: user.phanLoaiKhachHang ?? user.customerType ?? user.hangThanhVien ?? '',

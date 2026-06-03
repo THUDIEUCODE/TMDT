@@ -18,6 +18,7 @@ public class UserResponse {
     private String hoTen;
     private String email;
     private String soDienThoai;
+    private String diaChi;
     private LocalDate ngaySinh;
     private String vaiTro;
     private Boolean trangThai;

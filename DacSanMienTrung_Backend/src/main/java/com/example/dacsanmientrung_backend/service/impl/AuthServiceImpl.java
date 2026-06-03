@@ -37,6 +37,7 @@ public class AuthServiceImpl implements AuthService {
         // TODO: Mã hóa mật khẩu bằng BCrypt khi tích hợp Spring Security/JWT.
         nguoiDung.setMatKhau(request.getMatKhau());
         nguoiDung.setSoDienThoai(request.getSoDienThoai());
+        nguoiDung.setDiaChi(request.getDiaChi());
         nguoiDung.setVaiTro("khachhang");
         nguoiDung.setTrangThai(true);
         nguoiDung.setDiemTichLuy(0);
@@ -87,6 +88,7 @@ public class AuthServiceImpl implements AuthService {
                 nguoiDung.getHoTen(),
                 nguoiDung.getEmail(),
                 nguoiDung.getSoDienThoai(),
+                nguoiDung.getDiaChi(),
                 nguoiDung.getNgaySinh(),
                 nguoiDung.getVaiTro(),
                 nguoiDung.getTrangThai(),

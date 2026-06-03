@@ -11,6 +11,10 @@ public interface SanPhamService {
 
     List<SanPhamResponse> getProducts(String keyword, Integer categoryId, String province, BigDecimal minPrice, BigDecimal maxPrice);
 
+    List<SanPhamResponse> getManageProducts(String keyword, Integer categoryId, String province, BigDecimal minPrice, BigDecimal maxPrice);
+
+    SanPhamDetailResponse getManageProductById(Integer id);
+
     SanPhamDetailResponse getProductById(Integer id);
 
     List<SanPhamResponse> getProductsByCategory(Integer categoryId);

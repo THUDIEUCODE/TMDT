@@ -2,15 +2,18 @@ package com.example.dacsanmientrung_backend.service.impl;
 
 import com.example.dacsanmientrung_backend.dto.request.SanPhamRequest;
 import com.example.dacsanmientrung_backend.dto.response.BienTheResponse;
+import com.example.dacsanmientrung_backend.dto.response.HinhAnhSanPhamResponse;
 import com.example.dacsanmientrung_backend.dto.response.SanPhamDetailResponse;
 import com.example.dacsanmientrung_backend.dto.response.SanPhamResponse;
 import com.example.dacsanmientrung_backend.entity.BienThe;
 import com.example.dacsanmientrung_backend.entity.DanhMuc;
+import com.example.dacsanmientrung_backend.entity.HinhAnhSanPham;
 import com.example.dacsanmientrung_backend.entity.SanPham;
 import com.example.dacsanmientrung_backend.exception.BadRequestException;
 import com.example.dacsanmientrung_backend.exception.ResourceNotFoundException;
 import com.example.dacsanmientrung_backend.repository.BienTheRepository;
 import com.example.dacsanmientrung_backend.repository.DanhMucRepository;
+import com.example.dacsanmientrung_backend.repository.HinhAnhSanPhamRepository;
 import com.example.dacsanmientrung_backend.repository.SanPhamRepository;
 import com.example.dacsanmientrung_backend.service.SanPhamService;
 import org.springframework.stereotype.Service;
@@ -27,15 +30,18 @@ public class SanPhamServiceImpl implements SanPhamService {
     private final SanPhamRepository sanPhamRepository;
     private final BienTheRepository bienTheRepository;
     private final DanhMucRepository danhMucRepository;
+    private final HinhAnhSanPhamRepository hinhAnhSanPhamRepository;
 
     public SanPhamServiceImpl(
             SanPhamRepository sanPhamRepository,
             BienTheRepository bienTheRepository,
-            DanhMucRepository danhMucRepository
+            DanhMucRepository danhMucRepository,
+            HinhAnhSanPhamRepository hinhAnhSanPhamRepository
     ) {
         this.sanPhamRepository = sanPhamRepository;
         this.bienTheRepository = bienTheRepository;
         this.danhMucRepository = danhMucRepository;
+        this.hinhAnhSanPhamRepository = hinhAnhSanPhamRepository;
     }
 
     @Override
@@ -52,6 +58,27 @@ public class SanPhamServiceImpl implements SanPhamService {
     }
 
     @Override
+    public List<SanPhamResponse> getManageProducts(String keyword, Integer categoryId, String province, BigDecimal minPrice, BigDecimal maxPrice) {
+        return sanPhamRepository.findAll()
+                .stream()
+                .filter(sanPham -> matchesKeyword(sanPham, keyword))
+                .filter(sanPham -> matchesCategory(sanPham, categoryId))
+                .filter(sanPham -> matchesProvince(sanPham, province))
+                .filter(sanPham -> matchesMinPrice(sanPham, minPrice))
+                .filter(sanPham -> matchesMaxPrice(sanPham, maxPrice))
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Override
+    public SanPhamDetailResponse getManageProductById(Integer id) {
+        SanPham sanPham = sanPhamRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay san pham voi ma: " + id));
+
+        return toDetailResponse(sanPham);
+    }
+
+    @Override
     public SanPhamDetailResponse getProductById(Integer id) {
         SanPham sanPham = sanPhamRepository.findByMaSanPhamAndTrangThaiTrue(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với mã: " + id));
@@ -62,6 +89,7 @@ public class SanPhamServiceImpl implements SanPhamService {
                 .toList();
 
         DanhMuc danhMuc = sanPham.getDanhMuc();
+        List<HinhAnhSanPhamResponse> hinhAnhs = getProductImages(sanPham.getMaSanPham());
         return new SanPhamDetailResponse(
                 sanPham.getMaSanPham(),
                 sanPham.getTenSanPham(),
@@ -76,9 +104,10 @@ public class SanPhamServiceImpl implements SanPhamService {
                 sanPham.getVungMien(),
                 sanPham.getMoTaVanHoaTinh(),
                 sanPham.getGiaNiemYet(),
-                sanPham.getHinhAnh(),
+                getRepresentativeImage(hinhAnhs),
                 sanPham.getTrangThai(),
-                bienThes
+                bienThes,
+                hinhAnhs
         );
     }
 
@@ -198,7 +227,7 @@ public class SanPhamServiceImpl implements SanPhamService {
                 danhMuc.getMaDanhMuc(),
                 sanPham.getTenTinh(),
                 sanPham.getVungMien(),
-                sanPham.getHinhAnh(),
+                getRepresentativeImage(sanPham.getMaSanPham()),
                 sanPham.getGiaNiemYet(),
                 getLowestPrice(sanPham, activeVariants),
                 getTotalStock(activeVariants),
@@ -226,6 +255,7 @@ public class SanPhamServiceImpl implements SanPhamService {
                 .stream()
                 .map(this::toBienTheResponse)
                 .toList();
+        List<HinhAnhSanPhamResponse> hinhAnhs = getProductImages(sanPham.getMaSanPham());
 
         DanhMuc danhMuc = sanPham.getDanhMuc();
         return new SanPhamDetailResponse(
@@ -242,10 +272,35 @@ public class SanPhamServiceImpl implements SanPhamService {
                 sanPham.getVungMien(),
                 sanPham.getMoTaVanHoaTinh(),
                 sanPham.getGiaNiemYet(),
-                sanPham.getHinhAnh(),
+                getRepresentativeImage(hinhAnhs),
                 sanPham.getTrangThai(),
-                bienThes
+                bienThes,
+                hinhAnhs
         );
+    }
+
+    private List<HinhAnhSanPhamResponse> getProductImages(Integer maSanPham) {
+        return hinhAnhSanPhamRepository.findBySanPham_MaSanPhamOrderByThuTuAsc(maSanPham)
+                .stream()
+                .map(this::toHinhAnhSanPhamResponse)
+                .toList();
+    }
+
+    private HinhAnhSanPhamResponse toHinhAnhSanPhamResponse(HinhAnhSanPham hinhAnh) {
+        return new HinhAnhSanPhamResponse(
+                hinhAnh.getMaHinhAnh(),
+                hinhAnh.getSanPham().getMaSanPham(),
+                hinhAnh.getDuongDanAnh(),
+                hinhAnh.getThuTu()
+        );
+    }
+
+    private String getRepresentativeImage(Integer maSanPham) {
+        return getRepresentativeImage(getProductImages(maSanPham));
+    }
+
+    private String getRepresentativeImage(List<HinhAnhSanPhamResponse> hinhAnhs) {
+        return hinhAnhs.isEmpty() ? null : hinhAnhs.get(0).getDuongDanAnh();
     }
 
     private List<BienThe> getActiveVariants(SanPham sanPham) {

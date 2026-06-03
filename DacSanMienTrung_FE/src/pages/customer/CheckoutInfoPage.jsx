@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { mockCartItems } from '../../data/mockCart'
+import { getUserById } from '../../services/authService'
 import { getCart, mapCartItemFromApi } from '../../services/cartService'
-import { applyVoucher } from '../../services/voucherService'
-import { getCurrentUserId } from '../../utils/authStorage'
+import { getPendingCombo } from '../../services/comboService'
+import { getCurrentUser, getCurrentUserId, normalizeUser } from '../../utils/authStorage'
+import { getImageUrl, handleImageError } from '../../utils/imageUtils'
 
 const checkoutStorageKey = 'checkoutData'
 const shippingMethods = {
@@ -13,28 +15,29 @@ const shippingMethods = {
 const fallbackCartItems = mockCartItems.map(mapCartItemFromApi)
 const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`
 
-const getVoucherDiscount = (payload) => {
-  const voucher = payload?.data ?? payload ?? {}
-
-  return {
-    maVoucher: voucher.maVoucher ?? voucher.id ?? voucher.voucherId ?? null,
-    tienGiam: Number(voucher.tienGiam ?? voucher.discountAmount ?? voucher.soTienGiam ?? 0),
-    message: voucher.message ?? 'Đã áp dụng voucher.',
+const getStoredCheckout = () => {
+  try {
+    return JSON.parse(localStorage.getItem(checkoutStorageKey))
+  } catch {
+    return null
   }
 }
 
 function CheckoutInfoPage() {
   const navigate = useNavigate()
   const location = useLocation()
+  const storedCheckoutData = location.state?.checkoutData || getStoredCheckout()
+  const pendingCombo = getPendingCombo()
   const [items, setItems] = useState(fallbackCartItems)
   const [shippingMethod, setShippingMethod] = useState('standard')
   const [errors, setErrors] = useState({})
   const [isLoading, setIsLoading] = useState(true)
   const [hasApiError, setHasApiError] = useState(false)
-  const [voucherCode, setVoucherCode] = useState('')
-  const [voucherMessage, setVoucherMessage] = useState('')
-  const [voucherError, setVoucherError] = useState('')
-  const [appliedVoucher, setAppliedVoucher] = useState({ maVoucher: null, tienGiam: 0 })
+  const [appliedVoucher] = useState({
+    maVoucher: storedCheckoutData?.maVoucher ?? null,
+    maCode: storedCheckoutData?.voucherCode ?? '',
+    tienGiam: Number(storedCheckoutData?.tienGiam ?? 0),
+  })
   const [formData, setFormData] = useState({
     hoTenNguoiNhan: '',
     soDienThoaiNguoiNhan: '',
@@ -43,6 +46,26 @@ function CheckoutInfoPage() {
     tinhThanhGiaoHang: '',
     ghiChuGiaoHang: '',
   })
+
+  const fillDefaultAddress = (user) => {
+    const normalizedUser = normalizeUser(user)
+    const defaultAddress = normalizedUser.diaChi || normalizedUser.address || ''
+
+    if (!defaultAddress) {
+      return
+    }
+
+    setFormData((current) => {
+      if (current.diaChiGiaoHang.trim()) {
+        return current
+      }
+
+      return {
+        ...current,
+        diaChiGiaoHang: defaultAddress,
+      }
+    })
+  }
 
   useEffect(() => {
     const loadTimer = window.setTimeout(async () => {
@@ -53,9 +76,17 @@ function CheckoutInfoPage() {
         return
       }
 
+      fillDefaultAddress(getCurrentUser())
+
       try {
-        const apiItems = await getCart(maNguoiDung)
+        const [apiItems, apiUser] = await Promise.all([
+          getCart(maNguoiDung),
+          getUserById(maNguoiDung).catch(() => null),
+        ])
         setItems(apiItems)
+        if (apiUser) {
+          fillDefaultAddress(apiUser)
+        }
         setHasApiError(false)
       } catch {
         setItems(fallbackCartItems)
@@ -106,27 +137,6 @@ function CheckoutInfoPage() {
     return Object.keys(nextErrors).length === 0
   }
 
-  const handleApplyVoucher = async () => {
-    const maCode = voucherCode.trim()
-    setVoucherError('')
-    setVoucherMessage('')
-
-    if (!maCode) {
-      setVoucherError('Vui lòng nhập mã voucher.')
-      return
-    }
-
-    try {
-      const payload = await applyVoucher({ maCode, tongTienHang: subtotal })
-      const voucher = getVoucherDiscount(payload)
-      setAppliedVoucher(voucher)
-      setVoucherMessage(voucher.message)
-    } catch (error) {
-      setAppliedVoucher({ maVoucher: null, tienGiam: 0 })
-      setVoucherError(error?.message || 'Voucher không hợp lệ hoặc chưa thể áp dụng.')
-    }
-  }
-
   const submitCheckout = (event) => {
     event.preventDefault()
 
@@ -145,6 +155,7 @@ function CheckoutInfoPage() {
       maNguoiDung,
       ...formData,
       maVoucher: appliedVoucher.maVoucher,
+      voucherCode: appliedVoucher.maCode,
       tienGiam: discount,
       phiVanChuyen: shippingFee,
       tongTienHang: subtotal,
@@ -191,6 +202,13 @@ function CheckoutInfoPage() {
         <p className="product-result-summary">
           Không kết nối được backend, đang dùng dữ liệu mẫu.
         </p>
+      ) : null}
+
+      {pendingCombo.id ? (
+        <section className="voucher-box">
+          <label>Bạn đang đặt combo: {pendingCombo.name}</label>
+          {pendingCombo.message ? <p>Lời nhắn: {pendingCombo.message}</p> : null}
+        </section>
       ) : null}
 
       <form className="checkout-layout" onSubmit={submitCheckout}>
@@ -277,7 +295,9 @@ function CheckoutInfoPage() {
           <div className="checkout-mini-items">
             {items.map((item) => (
               <div key={item.id}>
-                <span>{item.image}</span>
+                <span>
+                  <img src={getImageUrl(item.hinhAnh || item.image)} alt={item.name} onError={handleImageError} />
+                </span>
                 <p>
                   <strong>{item.name}</strong>
                   <small>{item.variantName || item.variantLabel} x {item.quantity}</small>
@@ -287,22 +307,15 @@ function CheckoutInfoPage() {
             ))}
           </div>
 
-          <div className="voucher-box">
-            <label htmlFor="checkout-voucher">Mã voucher</label>
-            <div>
-              <input
-                id="checkout-voucher"
-                value={voucherCode}
-                onChange={(event) => setVoucherCode(event.target.value)}
-                placeholder="WELCOME10"
-              />
-              <button type="button" onClick={handleApplyVoucher}>
-                Áp dụng
-              </button>
+          {appliedVoucher.maVoucher ? (
+            <div className="voucher-box">
+              <label>Voucher đã áp dụng</label>
+              <p>
+                Mã {appliedVoucher.maCode || appliedVoucher.maVoucher} đã được áp dụng. Muốn đổi voucher,
+                vui lòng quay lại giỏ hàng.
+              </p>
             </div>
-            {voucherMessage ? <p>{voucherMessage}</p> : null}
-            {voucherError ? <p className="voucher-warning">{voucherError}</p> : null}
-          </div>
+          ) : null}
 
           <div className="summary-lines">
             <div>

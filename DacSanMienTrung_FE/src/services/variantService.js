@@ -10,6 +10,10 @@ const getArrayPayload = (payload) => {
     return payload.data
   }
 
+  if (Array.isArray(payload?.data?.content)) {
+    return payload.data.content
+  }
+
   if (Array.isArray(payload?.content)) {
     return payload.content
   }

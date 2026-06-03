@@ -56,8 +56,14 @@ function OrderSuccessPage() {
 
     try {
       const apiOrder = await getOrderById(orderId)
-      setOrder(apiOrder)
-      localStorage.setItem(latestOrderStorageKey, JSON.stringify(apiOrder))
+      const storedOrder = getStoredOrder()
+      const orderWithVoucher = {
+        ...apiOrder,
+        voucherCode: apiOrder.voucherCode || storedOrder?.voucherCode || '',
+        maCodeVoucher: apiOrder.maCodeVoucher || storedOrder?.maCodeVoucher || storedOrder?.voucherCode || '',
+      }
+      setOrder(orderWithVoucher)
+      localStorage.setItem(latestOrderStorageKey, JSON.stringify(orderWithVoucher))
       setHasApiError(false)
     } catch {
       setOrder((currentOrder) => currentOrder || getStoredOrder())
@@ -107,6 +113,14 @@ function OrderSuccessPage() {
       setIsConfirmingWallet(false)
     }
   }
+
+  const voucherCode = order?.voucherCode || order?.maCodeVoucher || order?.maCode || ''
+  const hasVoucher = Boolean(
+    order?.maVoucher ||
+      order?.voucherId ||
+      voucherCode ||
+      Number(order?.discount ?? order?.tienGiam ?? 0) > 0,
+  )
 
   if (!order && !isLoading) {
     return (
@@ -212,6 +226,14 @@ function OrderSuccessPage() {
                 ) : (
                   <p>Ví điện tử đã thanh toán thành công.</p>
                 )}
+              </div>
+            ) : null}
+
+            {hasVoucher ? (
+              <div className="payment-note">
+                <h3>Voucher đã áp dụng</h3>
+                <p>Mã {voucherCode || order.maVoucher || order.voucherId} đã được áp dụng cho đơn hàng này.</p>
+                <p>Giảm giá: {formatCurrency(order.discount ?? order.tienGiam)}</p>
               </div>
             ) : null}
 

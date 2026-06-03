@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { mockCartItems, mockCartVoucher } from '../../data/mockCart'
+import { mockCartItems } from '../../data/mockCart'
 import {
   clearCart,
   deleteCartItem,
@@ -8,19 +8,37 @@ import {
   mapCartItemFromApi,
   updateCartItem,
 } from '../../services/cartService'
+import { applyVoucher } from '../../services/voucherService'
 import { getCurrentUserId } from '../../utils/authStorage'
 import './CartPage.css'
 
 const shippingFee = 25000
 const formatCurrency = (value) => `${value.toLocaleString('vi-VN')}đ`
 const fallbackCartItems = mockCartItems.map(mapCartItemFromApi)
+const checkoutStorageKey = 'checkoutData'
+const pendingVoucherStorageKey = 'dacsan_pending_voucher_code'
+
+const getVoucherDiscount = (payload, maCode, tongTienHang) => {
+  const voucher = payload?.data ?? payload ?? {}
+  const tienGiam = Number(voucher.tienGiam ?? voucher.discountAmount ?? voucher.soTienGiam ?? 0)
+
+  return {
+    maVoucher: voucher.maVoucher ?? voucher.id ?? voucher.voucherId ?? null,
+    maCode: voucher.maCode ?? maCode,
+    tienGiam,
+    tongSauGiam: Number(voucher.tongSauGiam ?? voucher.totalAfterDiscount ?? Math.max(tongTienHang - tienGiam, 0)),
+    tongTienHang,
+    message: voucher.message ?? 'Đã áp dụng mã voucher.',
+  }
+}
 
 function CartPage() {
   const location = useLocation()
   const navigate = useNavigate()
   const [items, setItems] = useState(fallbackCartItems)
-  const [voucherCode, setVoucherCode] = useState(mockCartVoucher.code)
-  const [appliedVoucher, setAppliedVoucher] = useState(mockCartVoucher)
+  const [voucherCode, setVoucherCode] = useState('')
+  const [appliedVoucher, setAppliedVoucher] = useState(null)
+  const [isApplyingVoucher, setIsApplyingVoucher] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [hasApiError, setHasApiError] = useState(false)
   const [cartMessage, setCartMessage] = useState('')
@@ -35,7 +53,7 @@ function CartPage() {
     return items.reduce((total, item) => total + item.quantity, 0)
   }, [items])
 
-  const discount = appliedVoucher ? appliedVoucher.discountAmount : 0
+  const discount = appliedVoucher ? appliedVoucher.tienGiam : 0
   const total = Math.max(subtotal - discount + shippingFee, 0)
 
   const loadCart = useCallback(async ({ silent = false } = {}) => {
@@ -71,6 +89,15 @@ function CartPage() {
       window.clearTimeout(loadTimer)
     }
   }, [loadCart])
+
+  useEffect(() => {
+    const pendingVoucherCode = localStorage.getItem(pendingVoucherStorageKey)
+
+    if (pendingVoucherCode) {
+      setVoucherCode(pendingVoucherCode)
+      localStorage.removeItem(pendingVoucherStorageKey)
+    }
+  }, [])
 
   const updateFallbackQuantity = (itemId, nextQuantity) => {
     setItems((currentItems) =>
@@ -179,9 +206,57 @@ function CartPage() {
     }
   }
 
-  const applyVoucher = () => {
-    const normalizedCode = voucherCode.trim().toUpperCase()
-    setAppliedVoucher(normalizedCode === mockCartVoucher.code ? mockCartVoucher : null)
+  const handleApplyVoucher = async () => {
+    const maCode = voucherCode.trim().toUpperCase()
+    setCartError('')
+    setCartMessage('')
+
+    if (!maCode) {
+      setCartError('Vui lòng nhập mã voucher.')
+      return
+    }
+
+    try {
+      setIsApplyingVoucher(true)
+      const payload = await applyVoucher({ maCode, tongTienHang: subtotal })
+      const voucher = getVoucherDiscount(payload, maCode, subtotal)
+      setAppliedVoucher(voucher)
+      setVoucherCode(voucher.maCode)
+      setCartMessage(voucher.message)
+    } catch (error) {
+      setAppliedVoucher(null)
+      setCartError(error?.message || 'Voucher không hợp lệ hoặc chưa thể áp dụng.')
+    } finally {
+      setIsApplyingVoucher(false)
+    }
+  }
+
+  const removeVoucher = () => {
+    setAppliedVoucher(null)
+    setCartMessage('Đã bỏ voucher.')
+  }
+
+  const proceedToCheckout = () => {
+    const maNguoiDung = getCurrentUserId()
+
+    if (!maNguoiDung) {
+      navigate(`/login?redirect=${encodeURIComponent(`${location.pathname}${location.search}`)}`)
+      return
+    }
+
+    const checkoutData = {
+      maNguoiDung,
+      maVoucher: appliedVoucher?.maVoucher ?? null,
+      voucherCode: appliedVoucher?.maCode ?? '',
+      tienGiam: discount,
+      phiVanChuyen: shippingFee,
+      tongTienHang: subtotal,
+      tongThanhToan: total,
+      items,
+    }
+
+    localStorage.setItem(checkoutStorageKey, JSON.stringify(checkoutData))
+    navigate('/checkout', { state: { checkoutData } })
   }
 
   return (
@@ -278,15 +353,18 @@ function CartPage() {
                   onChange={(event) => setVoucherCode(event.target.value)}
                   placeholder="Nhập mã ưu đãi"
                 />
-                <button type="button" onClick={applyVoucher}>
+                <button type="button" onClick={handleApplyVoucher} disabled={isApplyingVoucher}>
                   Áp dụng
                 </button>
               </div>
               {appliedVoucher ? (
-                <p>Đã áp dụng mã {appliedVoucher.code}</p>
-              ) : (
-                <p className="voucher-warning">Mã chưa hợp lệ hoặc chưa được áp dụng.</p>
-              )}
+                <p>
+                  Đã áp dụng mã {appliedVoucher.maCode}.{' '}
+                  <button className="voucher-remove-button" type="button" onClick={removeVoucher}>
+                    Bỏ voucher
+                  </button>
+                </p>
+              ) : null}
             </div>
 
             <div className="summary-lines">
@@ -312,9 +390,9 @@ function CartPage() {
               </div>
             </div>
 
-            <Link className="button cart-checkout-button" to="/checkout">
+            <button className="button cart-checkout-button" type="button" onClick={proceedToCheckout}>
               Tiến hành đặt hàng
-            </Link>
+            </button>
           </aside>
         </section>
       ) : (

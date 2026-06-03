@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { mockCategories } from '../../data/mockCategories'
 import { mockProducts } from '../../data/mockProducts'
 import { getRootCategories } from '../../services/categoryService'
+import { getImageUrl, handleImageError } from '../../utils/imageUtils'
 
 const isRootCategory = (category) => category.parentId === null || category.parentId === undefined
 const getCategoryPath = (category) => `/categories/${category.id ?? category.slug}`
@@ -101,7 +102,11 @@ function CategoryOverviewPage() {
         {categories.map((category) => (
           <article className="category-overview-card" key={category.id}>
             <Link className="category-overview-image" to={getCategoryPath(category)}>
-              <span>{category.image}</span>
+              <img
+                src={getImageUrl(category.hinhAnh || category.image)}
+                alt={category.name}
+                onError={handleImageError}
+              />
             </Link>
             <div className="category-overview-body">
               <h2>{category.name}</h2>

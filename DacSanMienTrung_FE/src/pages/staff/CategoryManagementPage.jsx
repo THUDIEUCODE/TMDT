@@ -2,9 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { mockCategories } from '../../data/mockCategories'
 import {
   createCategory,
-  deleteCategory,
-  getCategories,
-  getCategoryById,
+  getManageCategories,
+  getManageCategoryById,
   getChildCategories,
   mapCategoryFromApi,
   toggleCategory,
@@ -34,6 +33,8 @@ const emptyCategoryForm = {
 
 const getStatusKey = (category) => (category.status ? 'visible' : 'hidden')
 const getTypeKey = (category) => (category.parentId ? 'child' : 'root')
+const getToggleConfirmMessage = (isActive) =>
+  isActive ? 'Bạn có chắc muốn tạm ẩn mục này không?' : 'Bạn có chắc muốn hiện lại mục này không?'
 
 function CategoryManagementPage() {
   const [categories, setCategories] = useState(fallbackCategories)
@@ -58,8 +59,8 @@ function CategoryManagementPage() {
     }
 
     try {
-      const apiCategories = await getCategories()
-      setCategories(apiCategories.length > 0 ? apiCategories : fallbackCategories)
+      const apiCategories = await getManageCategories()
+      setCategories(apiCategories)
       setHasApiError(false)
     } catch {
       setCategories(fallbackCategories)
@@ -70,7 +71,7 @@ function CategoryManagementPage() {
   }, [])
 
   useEffect(() => {
-    loadCategories()
+    Promise.resolve().then(() => loadCategories())
   }, [loadCategories])
 
   const parentNameById = useMemo(() => {
@@ -147,7 +148,7 @@ function CategoryManagementPage() {
     setIsDetailLoading(true)
 
     try {
-      const apiCategory = await getCategoryById(category.id)
+      const apiCategory = await getManageCategoryById(category.id)
       setDetailCategory(apiCategory)
 
       if (!apiCategory.parentId) {
@@ -256,22 +257,7 @@ function CategoryManagementPage() {
   }
 
   const handleToggleCategory = async (category) => {
-    setIsSaving(true)
-    setActionError('')
-
-    try {
-      await toggleCategory(category.id)
-      setActionMessage(category.status ? 'Đã ẩn danh mục.' : 'Đã hiện danh mục.')
-      await loadCategories()
-    } catch (error) {
-      setActionError(error?.message || 'Không kết nối được backend.')
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  const handleDeleteCategory = async (category) => {
-    if (!window.confirm('Bạn có chắc muốn xóa mềm danh mục này?')) {
+    if (!window.confirm(getToggleConfirmMessage(category.status))) {
       return
     }
 
@@ -279,8 +265,8 @@ function CategoryManagementPage() {
     setActionError('')
 
     try {
-      await deleteCategory(category.id)
-      setActionMessage('Đã xóa mềm danh mục.')
+      await toggleCategory(category.id)
+      setActionMessage(category.status ? 'Đã ẩn danh mục.' : 'Đã hiện danh mục.')
       await loadCategories()
     } catch (error) {
       setActionError(error?.message || 'Không kết nối được backend.')
@@ -367,8 +353,7 @@ function CategoryManagementPage() {
               <div className="category-actions">
                 <button type="button" disabled={isSaving} onClick={() => openDetailModal(category)}>Xem chi tiết</button>
                 <button type="button" disabled={isSaving} onClick={() => openEditModal(category)}>Sửa</button>
-                <button type="button" disabled={isSaving} onClick={() => handleToggleCategory(category)}>{category.status ? 'Ẩn' : 'Hiện'}</button>
-                <button type="button" disabled={isSaving} onClick={() => handleDeleteCategory(category)}>Xóa</button>
+                <button type="button" disabled={isSaving} onClick={() => handleToggleCategory(category)}>{category.status ? 'Tạm ẩn' : 'Hiện lại'}</button>
               </div>
             </article>
           ))}

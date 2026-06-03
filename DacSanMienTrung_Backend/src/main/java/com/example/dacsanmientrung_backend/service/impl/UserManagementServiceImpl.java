@@ -68,6 +68,7 @@ public class UserManagementServiceImpl implements UserManagementService {
         // TODO: Mã hóa mật khẩu bằng BCrypt khi tích hợp Spring Security/JWT.
         user.setMatKhau(request.getMatKhau());
         user.setSoDienThoai(request.getSoDienThoai());
+        user.setDiaChi(request.getDiaChi());
         user.setNgaySinh(request.getNgaySinh());
         user.setVaiTro(role);
         user.setTrangThai(request.getTrangThai() != null ? request.getTrangThai() : true);
@@ -88,6 +89,7 @@ public class UserManagementServiceImpl implements UserManagementService {
 
         user.setHoTen(validateName(request.getHoTen()));
         user.setSoDienThoai(request.getSoDienThoai());
+        user.setDiaChi(request.getDiaChi());
         user.setNgaySinh(request.getNgaySinh());
         user.setVaiTro(role);
         if (request.getTrangThai() != null) {
@@ -149,6 +151,7 @@ public class UserManagementServiceImpl implements UserManagementService {
                 user.getHoTen(),
                 user.getEmail(),
                 user.getSoDienThoai(),
+                user.getDiaChi(),
                 user.getNgaySinh(),
                 user.getVaiTro(),
                 user.getTrangThai(),

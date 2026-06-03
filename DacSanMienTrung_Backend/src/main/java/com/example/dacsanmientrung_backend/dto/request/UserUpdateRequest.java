@@ -21,6 +21,7 @@ public class UserUpdateRequest {
     @Size(max = 11, message = "Số điện thoại tối đa 11 ký tự")
     private String soDienThoai;
 
+    private String diaChi;
     private LocalDate ngaySinh;
     private String vaiTro;
     private Boolean trangThai;
