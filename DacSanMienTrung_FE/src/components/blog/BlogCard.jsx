@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom'
-import { getImageUrl, handleImageError } from '../../utils/imageUtils'
+import { getBlogImageSource, getImageUrl, handleImageError } from '../../utils/imageUtils'
 
 function BlogCard({ blog }) {
-  const blogImage = blog.hinhAnh || blog.image
+  const blogImage = getBlogImageSource(blog)
 
   return (
     <article className="blog-card">

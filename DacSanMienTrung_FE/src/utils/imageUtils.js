@@ -1,4 +1,15 @@
 const placeholderImage = '/images/placeholder.png'
+const imageFilePattern = /\.(avif|gif|jpe?g|png|svg|webp)$/i
+
+const isUsableImagePath = (image) => {
+  if (!image || !String(image).trim()) {
+    return false
+  }
+
+  const imagePath = String(image).trim()
+
+  return /^https?:\/\//i.test(imagePath) || imagePath.startsWith('/') || imagePath.includes('/') || imageFilePattern.test(imagePath)
+}
 const imageExtensionPattern = /\.(avif|gif|jpe?g|png|svg|webp)$/i
 
 const legacyImageCodeMap = {
@@ -87,6 +98,48 @@ export const resolveProductImage = (productName, image) => {
 
 export const handleImageError = (event) => {
   event.currentTarget.src = placeholderImage
+}
+
+export const getBlogImageSource = (blog = {}) => {
+  if (blog.hinhAnh) {
+    return blog.hinhAnh
+  }
+
+  if (isUsableImagePath(blog.image)) {
+    return blog.image
+  }
+
+  if (isUsableImagePath(blog.thumbnail)) {
+    return blog.thumbnail
+  }
+
+  const key = String(`${blog.slug || ''} ${blog.id || ''} ${blog.topic || ''} ${blog.province || ''}`).toLowerCase()
+
+  if (key.includes('tra') || key.includes('trà')) {
+    return 'blogs/tra-sam-dua-da-nang_blog.webp'
+  }
+
+  if (key.includes('que') || key.includes('quế')) {
+    return 'blogs/que_tra_my_blog.jpg'
+  }
+
+  if (key.includes('hoi-an') || key.includes('hội an')) {
+    return 'blogs/Hoi_an.jpg'
+  }
+
+  if (key.includes('da-nang') || key.includes('đà nẵng')) {
+    return 'blogs/bien_da_nang.jpg'
+  }
+
+  if (key.includes('tay-nguyen') || key.includes('tây nguyên')) {
+    return 'blogs/Tay_nguyen.jpg'
+  }
+
+  if (key.includes('hue') || key.includes('huế')) {
+    return 'blogs/co_do_hue.jpg'
+  }
+
+  return 'blogs/Tra_hue.jpg'
 }
 
 export { placeholderImage }

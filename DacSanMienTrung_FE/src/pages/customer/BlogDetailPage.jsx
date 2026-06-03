@@ -7,7 +7,7 @@ import { mockProducts } from '../../data/mockProducts'
 import { getBlogById, mapBlogFromApi } from '../../services/blogService'
 import { getProductById, mapProductFromApi } from '../../services/productService'
 import { sanitizeHtmlContent } from '../../utils/htmlContent'
-import { getImageUrl, handleImageError } from '../../utils/imageUtils'
+import { getBlogImageSource, getImageUrl, handleImageError } from '../../utils/imageUtils'
 
 const fallbackBlogs = mockBlogs.map(mapBlogFromApi)
 const fallbackProducts = mockProducts.map(mapProductFromApi)
@@ -106,7 +106,7 @@ function BlogDetailPage() {
 
       <article className="blog-detail-article">
         <div className="blog-detail-image">
-          <img src={getImageUrl(blog.hinhAnh || blog.image)} alt={blog.title} onError={handleImageError} />
+          <img src={getImageUrl(getBlogImageSource(blog))} alt={blog.title} onError={handleImageError} />
         </div>
         <div className="blog-detail-content">
           <div className="blog-detail-meta">
