@@ -1,3 +1,4 @@
+import { resolveProductImage } from '../utils/imageUtils'
 import { getApi, putApi } from './apiClient'
 
 const getArrayPayload = (payload) => {
@@ -73,6 +74,7 @@ export const mapInventoryFromApi = (apiInventory = {}) => {
   const stock = Number(inventory.soLuongTon ?? inventory.stock ?? 0)
   const inventoryStatus = inventory.trangThaiTonKho ?? inventory.inventoryStatus ?? normalizeInventoryStatus(stock)
   const variantStatusValue = inventory.trangThaiBienThe ?? inventory.variantStatus ?? inventory.status
+  const rawImage = inventory.hinhAnhBienThe ?? inventory.hinhAnhSanPham ?? inventory.image ?? inventory.productImage ?? inventory.variantImage ?? ''
 
   return {
     ...inventory,
@@ -86,7 +88,7 @@ export const mapInventoryFromApi = (apiInventory = {}) => {
     region: inventory.vungMien ?? inventory.region ?? '',
     productImage: inventory.hinhAnhSanPham ?? inventory.productImage ?? '',
     variantImage: inventory.hinhAnhBienThe ?? inventory.variantImage ?? '',
-    image: inventory.hinhAnhBienThe ?? inventory.hinhAnhSanPham ?? inventory.image ?? createInitials(productName),
+    image: resolveProductImage(productName, rawImage) || createInitials(productName),
     weight: inventory.trongLuong ?? inventory.weight ?? '',
     packaging: inventory.quyCachDongGoi ?? inventory.packaging ?? '',
     price: Number(inventory.giaBan ?? inventory.price ?? 0),

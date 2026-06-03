@@ -10,7 +10,7 @@ function UnauthorizedPage() {
     <section className="login-page">
       <div className="login-card">
         <Link to="/" className="login-brand">
-          <span>MT</span>
+          <img src="/images/brand/logo-mark.png" alt="Đặc Sản Miền Trung" />
           <strong>Đặc Sản Miền Trung</strong>
         </Link>
 

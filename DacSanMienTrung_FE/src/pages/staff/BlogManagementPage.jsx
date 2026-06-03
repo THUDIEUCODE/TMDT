@@ -9,6 +9,7 @@ import {
   publishBlog,
   updateBlog,
 } from '../../services/blogService'
+import { sanitizeHtmlContent } from '../../utils/htmlContent'
 import './BlogManagementPage.css'
 
 const fallbackBlogs = mockBlogs.map(mapBlogFromApi)
@@ -385,7 +386,10 @@ function BlogManagementPage() {
               <span>{Number(detailBlog.views || 0).toLocaleString('vi-VN')} lượt xem</span>
             </div>
             <p className="blog-detail-summary">{detailBlog.description || detailBlog.summary}</p>
-            <p className="blog-detail-content">{detailBlog.content}</p>
+            <div
+              className="blog-detail-content"
+              dangerouslySetInnerHTML={{ __html: sanitizeHtmlContent(detailBlog.content) }}
+            />
             <div className="blog-related-products">
               <h3>Sản phẩm liên quan</h3>
               {detailBlog.relatedProductIds?.length > 0 ? (

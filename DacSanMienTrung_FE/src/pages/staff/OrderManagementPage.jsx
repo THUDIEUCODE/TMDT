@@ -14,9 +14,11 @@ import {
   updateOrderStatus,
 } from '../../services/orderService'
 import { getCurrentUser } from '../../utils/authStorage'
+import { getImageUrl, handleImageError, isImageValue } from '../../utils/imageUtils'
 import './OrderManagementPage.css'
 
 const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`
+const getImageFallback = (value, fallback = 'SP') => String(value || fallback).slice(0, 2).toUpperCase()
 const formatDate = (value) => {
   if (!value) {
     return 'Đang cập nhật'
@@ -577,7 +579,13 @@ function OrderManagementPage() {
               <h3>Sản phẩm trong đơn</h3>
               {(detailOrder.items || []).map((item) => (
                 <div className="staff-order-detail-item" key={item.id}>
-                  <span>{item.image}</span>
+                  <span>
+                    {isImageValue(item.image) ? (
+                      <img src={getImageUrl(item.image)} alt={item.name} onError={handleImageError} />
+                    ) : (
+                      getImageFallback(item.image, item.name)
+                    )}
+                  </span>
                   <strong>{item.name}</strong>
                   <small>{item.variant}</small>
                   <small>x{item.quantity}</small>

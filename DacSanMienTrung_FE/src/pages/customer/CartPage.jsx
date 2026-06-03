@@ -10,6 +10,7 @@ import {
 } from '../../services/cartService'
 import { applyVoucher } from '../../services/voucherService'
 import { getCurrentUserId } from '../../utils/authStorage'
+import { getImageUrl, handleImageError, isImageValue } from '../../utils/imageUtils'
 import './CartPage.css'
 
 const shippingFee = 25000
@@ -17,6 +18,7 @@ const formatCurrency = (value) => `${value.toLocaleString('vi-VN')}đ`
 const fallbackCartItems = mockCartItems.map(mapCartItemFromApi)
 const checkoutStorageKey = 'checkoutData'
 const pendingVoucherStorageKey = 'dacsan_pending_voucher_code'
+const getImageFallback = (value, fallback = 'SP') => String(value || fallback).slice(0, 2).toUpperCase()
 
 const getVoucherDiscount = (payload, maCode, tongTienHang) => {
   const voucher = payload?.data ?? payload ?? {}
@@ -291,7 +293,11 @@ function CartPage() {
             {items.map((item) => (
               <article className="cart-item" key={item.id}>
                 <div className="cart-item-image">
-                  <span>{item.image}</span>
+                  {isImageValue(item.image) ? (
+                    <img src={getImageUrl(item.image)} alt={item.name} onError={handleImageError} />
+                  ) : (
+                    <span>{getImageFallback(item.image, item.name)}</span>
+                  )}
                 </div>
 
                 <div className="cart-item-info">

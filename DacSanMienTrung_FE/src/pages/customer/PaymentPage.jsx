@@ -3,10 +3,12 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { clearPendingCombo, getPendingCombo, markComboOrdered } from '../../services/comboService'
 import { createOrder } from '../../services/orderService'
 import { getCurrentUserId } from '../../utils/authStorage'
+import { getImageUrl, handleImageError, isImageValue } from '../../utils/imageUtils'
 
 const checkoutStorageKey = 'checkoutData'
 const latestOrderStorageKey = 'latestOrder'
 const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`
+const getImageFallback = (value, fallback = 'SP') => String(value || fallback).slice(0, 2).toUpperCase()
 const paymentMethods = [
   { id: 'COD', label: 'Thanh toán khi nhận hàng COD' },
   { id: 'chuyenKhoan', label: 'Chuyển khoản ngân hàng' },
@@ -190,7 +192,13 @@ function PaymentPage() {
           <div className="checkout-mini-items">
             {(checkoutData.items || []).map((item) => (
               <div key={item.id}>
-                <span>{item.image}</span>
+                <span>
+                  {isImageValue(item.image) ? (
+                    <img src={getImageUrl(item.image)} alt={item.name} onError={handleImageError} />
+                  ) : (
+                    getImageFallback(item.image, item.name)
+                  )}
+                </span>
                 <p>
                   <strong>{item.name}</strong>
                   <small>{item.variantName || item.variantLabel} x {item.quantity}</small>

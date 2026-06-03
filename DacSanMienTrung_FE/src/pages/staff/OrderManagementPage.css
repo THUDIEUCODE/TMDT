@@ -122,6 +122,8 @@
 .staff-order-table-card {
   display: grid;
   gap: 14px;
+  min-width: 0;
+  overflow: hidden;
   padding: 18px;
 }
 
@@ -220,6 +222,8 @@
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .staff-order-action-note {
@@ -401,10 +405,19 @@
   height: 48px;
   display: grid;
   place-items: center;
+  overflow: hidden;
   color: var(--color-cream);
   background: linear-gradient(135deg, var(--color-purple), var(--color-red));
   border-radius: 12px;
   font-weight: 900;
+  white-space: nowrap;
+}
+
+.staff-order-detail-item > span img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .staff-order-detail-item b {

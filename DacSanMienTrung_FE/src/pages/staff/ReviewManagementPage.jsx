@@ -7,6 +7,7 @@ import {
   hideReview,
   mapReviewFromApi,
 } from '../../services/reviewService'
+import { getImageUrl, handleImageError, isImageValue } from '../../utils/imageUtils'
 import './ReviewManagementPage.css'
 
 const statusOptions = [
@@ -16,6 +17,7 @@ const statusOptions = [
 ]
 
 const ratingOptions = ['all', '5', '4', '3', '2', '1']
+const getImageFallback = (value, fallback = 'SP') => String(value || fallback).slice(0, 2).toUpperCase()
 
 const formatDate = (value) => {
   if (!value) return 'Đang cập nhật'
@@ -218,7 +220,13 @@ function ReviewManagementPage() {
 
           {filteredReviews.map((review) => (
             <article className="review-table-row" key={review.id}>
-              <span className="review-product-image">{review.productImage}</span>
+              <span className="review-product-image">
+                {isImageValue(review.productImage) ? (
+                  <img src={getImageUrl(review.productImage)} alt={review.productName} onError={handleImageError} />
+                ) : (
+                  getImageFallback(review.productImage, review.productName)
+                )}
+              </span>
               <strong>{review.customerName}</strong>
               <span>{review.productName}</span>
               <span>{review.variant}</span>

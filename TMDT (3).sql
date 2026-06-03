@@ -577,44 +577,9 @@ VALUES
 (5, 38, 1, 990000,  990000,  NULL, NULL, NULL, 0);
 
 
--- ► 11. BlogAmThuc (5 bài viết mẫu)
-INSERT INTO BlogAmThuc (maTacGia, tieuDe, moTa, noiDung, chuDe, tenTinh, trangThai)
-VALUES
-(2, N'Hành trình khám phá ẩm thực Huế Cổ Đô',
-    N'Cố đô Huế sở hữu kho tàng ẩm thực phong phú từ cung đình đến dân gian',
-    N'Huế không chỉ nổi tiếng với các di sản văn hóa mà còn là thiên đường ẩm thực...',
-    N'Ẩm thực', N'Thừa Thiên Huế', 1),
-(1, N'Đặc sản miền biển Đà Nẵng – Vị mặn mòi của biển khơi',
-    N'Biển Đà Nẵng mang đến nguồn hải sản phong phú và các món ăn đậm đà',
-    N'Đà Nẵng với bờ biển dài hơn 30km là kho tàng hải sản tươi ngon...',
-    N'Hải sản', N'Đà Nẵng', 1),
-(2, N'Trà Huế – Nghệ thuật thưởng trà của người xứ Cố Đô',
-    N'Uống trà là nét văn hóa tinh tế của người Huế từ cung đình đến thường dân',
-    N'Người Huế uống trà như một nghi lễ, từ cách pha, cách rót đến không gian thưởng thức...',
-    N'Văn hóa', N'Thừa Thiên Huế', 1),
-(1, N'Tây Nguyên và câu chuyện của những loài thảo dược quý',
-    N'Đại ngàn Tây Nguyên ẩn chứa vô số thảo dược quý từ ngàn xưa',
-    N'Từ rừng Kon Tum đến Đắk Lắk, người dân tộc bản địa đã biết sử dụng thảo dược...',
-    N'Dược liệu', N'Kon Tum', 1),
-(2, N'Hội An – Nơi lưu giữ hồn vải dệt truyền thống',
-    N'Làng dệt lụa Mã Châu và làng gốm Thanh Hà là linh hồn của phố cổ Hội An',
-    N'Cách Hội An 10km về phía nam, làng lụa Mã Châu vẫn giữ nguyên tiếng thoi đưa...',
-    N'Làng nghề', N'Quảng Nam', 1);
 
 
--- ► 12. BlogSanPham (sửa lại maSanPham đúng 1-19)
-INSERT INTO BlogSanPham (maBlog, maSanPham)
-VALUES
-(1, 1),   -- Blog Huế        → Bánh In Đậu Xanh Huế      (maSanPham=1)
-(1, 7),   -- Blog Huế        → Trà Sen Huế Thượng Hạng    (maSanPham=7)
-(2, 10),  -- Blog Đà Nẵng    → Mực Khô Lý Sơn             (maSanPham=10)
-(2, 11),  -- Blog Đà Nẵng    → Bò Một Nắng Phú Yên        (maSanPham=11)
-(3, 5),   -- Blog Trà        → Trà Xanh Cổ Thụ A Lưới     (maSanPham=5)
-(3, 7),   -- Blog Trà        → Trà Sen Huế Thượng Hạng    (maSanPham=7)
-(4, 16),  -- Blog Tây Nguyên → Đinh Lăng Rừng Quảng Bình  (maSanPham=16)
-(4, 17),  -- Blog Tây Nguyên → Cao Đinh Lăng Mật Ong      (maSanPham=17)
-(5, 19),  -- Blog Hội An     → Lụa Tơ Tằm Mã Châu         (maSanPham=19)
-(5, 14);  -- Blog Hội An     → Ấm Trà Gốm Thanh Hà        (maSanPham=14)
+
 
 GO
 
@@ -787,3 +752,163 @@ WHERE maDanhMuc = 7;
 UPDATE DanhMuc
 SET hinhAnh = N'categories/danh-muc-vai.jpg'
 WHERE maDanhMuc = 8;
+
+
+
+-- ► 11. BlogAmThuc (5 bài viết mẫu - nội dung hoàn chỉnh)
+INSERT INTO BlogAmThuc (maTacGia, tieuDe, moTa, noiDung, chuDe, tenTinh, trangThai)
+VALUES
+(
+  2,
+  N'Hành trình khám phá ẩm thực Huế Cổ Đô',
+  N'Cố đô Huế sở hữu kho tàng ẩm thực phong phú từ cung đình đến dân gian',
+  N'<h2>Dấu ấn lịch sử trên từng đĩa thức ăn</h2>
+<p>Huế không chỉ nổi tiếng với các di sản văn hóa mà còn là thiên đường ẩm thực mang đậm dấu ấn cung đình và dân gian hòa quyện. Trong suốt hơn 150 năm là kinh đô của triều Nguyễn (1802–1945), Huế đã phát triển một nền ẩm thực cung đình hoàn chỉnh với những quy tắc chặt chẽ về hình thức, màu sắc và hương vị. Mỗi bữa ăn của vua được phục vụ đến 50 món trở lên, bày trên mâm son thếp vàng, do các đầu bếp cung đình — gọi là "thượng thiện" — phụ trách. Ngày nay, những tinh hoa đó đã lan tỏa ra dân gian, trở thành món ăn quen thuộc của người Huế trên từng góc phố.</p>
+
+<h2>Bún bò Huế — linh hồn của buổi sáng cố đô</h2>
+<p>Nhắc đến Huế mà bỏ qua bún bò là một thiếu sót không thể tha thứ. Khác với phở Hà Nội thanh tao hay hủ tiếu Nam Bộ ngọt lịm, bún bò Huế mang vị đậm đà riêng biệt: nước dùng được ninh từ xương bò nhiều giờ, quyện cùng mắm ruốc Huế, sả, gừng và ớt tươi. Màu đỏ cam rực rỡ của tô bún không chỉ hấp dẫn mắt mà còn báo hiệu độ cay nồng đặc trưng khiến thực khách vừa ăn vừa xuýt xoa. Tô bún đầy đủ phải có bắp bò, chả Huế, huyết và móng giò, ăn kèm rổ rau sống gồm bắp chuối bào, giá, húng quế và chanh tươi.</p>
+
+<h2>Nem lụi, bánh khoái và những đặc sản không thể bỏ lỡ</h2>
+<p>Dọc bờ sông Hương và trong các ngõ hẻm quanh Thành Nội, mùi khói than hồng từ những xiên nem lụi nướng luôn là sức hút khó cưỡng. Nem lụi Huế được làm từ thịt heo xay, quết với mỡ, tỏi và các gia vị bí truyền, nhào nặn quanh cọng sả rồi nướng trực tiếp trên than hoa. Ăn kèm với bánh tráng mỏng, rau sống và tương đậu phộng ngọt ngào — đây là sự kết hợp hoàn hảo giữa những nguyên liệu giản dị nhất.</p>
+<p>Bánh khoái — người anh em giòn rụm của bánh xèo — cũng là một đặc sản không thể bỏ qua. Nhỏ hơn bánh xèo miền Nam, bánh khoái Huế giòn tan, nhân tôm tươi, thịt và giá đỗ, ăn cùng nước lèo sền sệt pha từ gan heo và đậu phộng. Nổi tiếng nhất là hàng bánh khoái dưới chân cầu Trường Tiền, nơi người dân địa phương xếp hàng từ xế chiều.</p>
+<h2>Ẩm thực cung đình — tinh hoa còn lưu giữ</h2>
+<p>Nhiều nhà hàng trong nội thành Huế ngày nay vẫn phục dựng những bữa tiệc cung đình với đầy đủ nghi lễ: khăn ăn thêu hoa, đũa ngà, âm nhạc nhã nhạc vang lên trong không gian bài trí theo phong cách hoàng cung. Các món như cơm hến, chả tôm Huế, bánh bèo, bánh nậm, bánh lọc — thoạt nhìn nhỏ bé nhưng đòi hỏi kỹ thuật chế biến tỉ mỉ đến từng chi tiết — đều có nguồn gốc từ những bàn tay khéo léo của các nghệ nhân thượng thiện xưa.</p>
+
+<h2>Lời kết của một người lữ hành</h2>
+<p>Ẩm thực Huế không phải là thứ bạn có thể cảm nhận hết trong một lần ghé thăm. Mỗi món ăn là một tầng ký ức, một câu chuyện dài về lịch sử, con người và văn hóa. Hãy đến Huế với một cái bụng trống và một tâm hồn rộng mở — cố đô sẽ chiêu đãi bạn theo cách không thể quên.',
+  N'Ẩm thực',
+  N'Thừa Thiên Huế',
+  1
+),
+
+(
+  1,
+  N'Đặc sản miền biển Đà Nẵng – Vị mặn mòi của biển khơi',
+  N'Biển Đà Nẵng mang đến nguồn hải sản phong phú và các món ăn đậm đà',
+  N'<h2>Vùng biển giàu có — kho báu dưới lòng đại dương</h2>
+<p>Đà Nẵng với bờ biển dài hơn 30 km là kho tàng hải sản tươi ngon bậc nhất miền Trung. Nằm ở vị trí địa lý đặc biệt, nơi dòng biển lạnh và dòng biển ấm giao thoa, vùng biển Đà Nẵng tạo ra một hệ sinh thái đa dạng với hàng trăm loài cá, tôm, cua, mực và các loài nhuyễn thể quý hiếm. Mỗi sáng sớm, ngư dân từ các làng chài Nam Ô, Mân Thái, Thọ Quang kéo lưới về bến, mang theo những khoang thuyền đầy ắp tôm hùm, cá thu, cá ngừ, ghẹ xanh còn nhảy tanh tách.</p>
+
+<h2>Mì Quảng hải sản — bản hòa tấu của đất và biển</h2>
+<p>Mì Quảng là linh hồn ẩm thực của cả vùng đất Quảng Nam – Đà Nẵng, nhưng phiên bản hải sản tại đây mang một đẳng cấp riêng. Những sợi mì vàng tươi, dày dặn, được làm từ bột gạo ngâm, tráng mỏng rồi thái sợi — ăn kèm với tôm tươi, cua thịt, trứng cút, rau sống và bánh tráng nướng giòn. Nước nhân đậm đà nhưng không nhiều, chỉ đủ thấm vào từng sợi mì — đây là điểm khác biệt lớn nhất so với các loại mì nước khác.</p>
+
+<h2>Bánh tráng cuốn thịt heo — niềm tự hào dân dã</h2>
+<p>Người Đà Nẵng tự hào gọi đây là đặc sản quốc dân của thành phố. Bánh tráng mỏng dai, thịt heo luộc vừa chín tới, rau sống đủ loại — húng lủi, xà lách, dưa leo, chuối xanh — cuốn chặt rồi chấm vào bát mắm nêm đặc trưng pha tỏi ớt. Sự kết hợp tưởng chừng đơn giản này lại tạo ra một vũ trụ hương vị hoàn chỉnh: béo, tươi, giòn, chua, cay và mặn — tất cả trong một miếng cuốn.</p>
+
+<h2>Các món hải sản tươi sống — chân chất mà sang</h2>
+<p>Dọc tuyến đường Hoàng Sa, Trường Sa và khu vực bãi biển Mỹ Khê, hàng trăm nhà hàng hải sản phục vụ nguyên liệu tươi ngay từ thuyền ngư dân. Tôm hùm hấp nước dừa, cua Huỳnh Đế rang muối, ghẹ hấp gừng lá sả, mực một nắng nướng mỡ hành — những món này không cần kỹ thuật chế biến cầu kỳ, chỉ cần nguyên liệu thật tươi và bàn tay khéo léo của đầu bếp là đã chinh phục mọi thực khách.</p>
+
+<h2>Nam Ô — làng nghề nước mắm trăm tuổi</h2>
+<p>Không thể nói về ẩm thực Đà Nẵng mà bỏ qua làng Nam Ô — nơi sản xuất nước mắm truyền thống đã tồn tại hơn 100 năm. Nước mắm Nam Ô được làm hoàn toàn từ cá cơm than, ủ trong lu sành theo phương pháp cổ truyền trong 12–18 tháng. Màu đỏ cánh gián, hương thơm nồng nàn và vị mặn ngọt hài hòa — giọt nước mắm Nam Ô là linh hồn không thể thiếu trong bếp ăn người dân Đà Nẵng và cả miền Trung.</p>
+
+<h2>Một thành phố biển đáng để trở lại</h2>
+<p>Đà Nẵng đang ngày càng khẳng định vị thế là điểm đến ẩm thực hàng đầu miền Trung. Từ những quán ăn vỉa hè bình dị đến các nhà hàng cao cấp view biển, thành phố này luôn có cách chiều lòng mọi thực khách — bởi nguyên liệu tươi ngon từ biển cả chưa bao giờ là thứ Đà Nẵng thiếu.</p>',
+  N'Hải sản',
+  N'Đà Nẵng',
+  1
+),
+
+(
+  2,
+  N'Trà Huế – Nghệ thuật thưởng trà của người xứ Cố Đô',
+  N'Uống trà là nét văn hóa tinh tế của người Huế từ cung đình đến thường dân',
+  N'<h2>Trà trong cung đình Nguyễn — khởi nguồn của một mỹ tục</h2>
+<p>Người Huế uống trà như một nghi lễ, từ cách pha, cách rót đến không gian thưởng thức — tất cả đều mang chiều sâu văn hóa hàng trăm năm. Dưới triều Nguyễn, trà không đơn giản là thức uống — đó là một phần trong nghi lễ cung đình. Vua Minh Mạng và vua Thiệu Trị đặc biệt yêu thích trà, và có hẳn đội ngũ chuyên trách việc tuyển chọn, bảo quản và pha chế trà theo đúng quy chuẩn cung đình. Trà được pha bằng nước sương mai thu từ lá sen trên hồ Tịnh Tâm, đun sôi trong ấm đồng, rót ra chén sứ men ngọc lam mỏng như giấy. Phong cách này dần lan ra dân gian và trở thành nét văn hóa bền bỉ của người Huế.</p>
+
+<h2>Bộ trà — tinh tế đến từng chi tiết</h2>
+<p>Người Huế sành trà có thể bỏ ra nhiều tháng tiền lương chỉ để sở hữu một bộ ấm chén Tử Sa Nghi Hưng từ Trung Quốc, hoặc bộ chén bạch sứ Huế tráng men trong vắt do các nghệ nhân làng Phước Tích chế tác. Bộ trà đủ chuẩn gồm: ấm pha dung tích nhỏ thường 100–150 ml, chén tống để rót trà ra tập trung trước khi chia đều, chén uống nhỏ như lòng bàn tay vừa một ngụm, khay trà bằng gỗ sơn mài hoặc mây tre đan, và hộp đựng trà bằng thiếc hay gốm.</p>
+
+<h2>Nghệ thuật pha trà — khi kiên nhẫn trở thành thiền định</h2>
+<p>Quy trình pha một ấm trà đúng kiểu Huế có thể kéo dài 15–20 phút. Đầu tiên, tráng ấm chén bằng nước sôi để làm nóng dụng cụ và khử mùi lạ. Tiếp theo, cho trà vào ấm — người Huế ưa trà móc câu, trà đinh hay trà ướp hoa nhài, hoa sen — lượng trà chiếm khoảng 1/3 thể tích ấm. Rót nước sôi lần đầu vào rồi đổ đi ngay để đánh thức lá trà. Lần rót thứ hai mới là ấm trà thật sự — để ngấm đúng 60–90 giây tùy loại trà, rồi rót đều ra chén tống, sau đó phân đều vào từng chén nhỏ.</p>
+
+<h2>Không gian thưởng trà — yếu tố quyết định hồn trà</h2>
+<p>Người Huế tin rằng trà ngon một phần, không gian ngon chín phần. Những căn nhà vườn Huế cổ kính với hàng chè tàu xanh mướt, giàn hoa giấy đỏ thắm và tiếng chim hót xa xa chính là không gian lý tưởng để thưởng trà. Trà được uống trong yên lặng hoặc trong tiếng đàn tranh nhẹ nhàng, tuyệt đối không ồn ào, không vội vã. Một buổi trà chiều thường kéo dài 2–3 giờ đồng hồ với nhiều ấm trà nối tiếp nhau.</p>
+
+<h2>Trà sen Huế — đỉnh cao của nghệ thuật ướp trà</h2>
+<p>Nếu có một loại trà đại diện cho tinh thần Huế, đó chắc chắn là trà sen. Mỗi năm chỉ một mùa sen nở trên đầm Tịnh Tâm và các ao sen quanh thành nội, người Huế thức từ 4 giờ sáng để nhẹ nhàng bỏ trà vào từng bông sen còn đọng sương, buộc lại để trà hút trọn hương hoa trong vài giờ. Mỗi lạng trà sen đòi hỏi hàng trăm bông hoa và hàng chục giờ lao động tỉ mỉ — đó là lý do trà sen Huế có giá từ vài trăm nghìn đến hàng triệu đồng mỗi lạng, nhưng người sành trà vẫn sẵn sàng chi trả.</p>
+
+<h2>Văn hóa trà trong đời sống hiện đại</h2>
+<p>Dù nhịp sống hiện đại đang thay đổi nhiều thứ, văn hóa trà Huế vẫn được thế hệ trẻ trân trọng và kế thừa. Nhiều quán trà đạo theo phong cách cổ truyền mở ra ở trung tâm thành phố, thu hút không chỉ người lớn tuổi mà cả các bạn trẻ tìm về với sự chậm rãi, tĩnh lặng giữa cuộc sống xô bồ. Trà Huế — hơn cả một thức uống — là lời nhắc nhở về nghệ thuật sống chậm, sống có chiều sâu.</p>',
+  N'Văn hóa',
+  N'Thừa Thiên Huế',
+  1
+),
+
+(
+  1,
+  N'Tây Nguyên và câu chuyện của những loài thảo dược quý',
+  N'Đại ngàn Tây Nguyên ẩn chứa vô số thảo dược quý từ ngàn xưa',
+  N'<h2>Đại ngàn — nơi thiên nhiên còn giữ bí mật</h2>
+<p>Từ rừng Kon Tum đến Đắk Lắk, người dân tộc bản địa đã biết sử dụng thảo dược từ ngàn đời để chữa bệnh và bồi bổ sức khỏe. Tây Nguyên là một trong số ít vùng lãnh thổ ở Đông Nam Á còn lưu giữ được những khu rừng nguyên sinh quy mô lớn. Theo thống kê của Viện Dược liệu Việt Nam, riêng khu vực Tây Nguyên đã ghi nhận hơn 1.500 loài cây có tác dụng dược lý, trong đó nhiều loài chỉ tồn tại ở đây và không thể tìm thấy ở bất kỳ đâu khác trên thế giới.</p>
+
+<h2>Tri thức bản địa — di sản vô giá đang dần mai một</h2>
+<p>Người Ba Na ở Kon Tum, người Gia Rai ở Gia Lai, người Ê Đê ở Đắk Lắk — mỗi tộc người đều sở hữu một kho tri thức y học dân gian phong phú được truyền miệng qua nhiều thế hệ. Các già làng và thầy thuốc bản địa biết cách dùng lá cây, rễ cây, vỏ cây để chữa từ những bệnh thông thường như sốt, ho, đau bụng đến những bệnh mãn tính như viêm khớp, tiểu đường, cao huyết áp. Tiếc thay, kho tri thức quý báu này đang dần thất truyền khi lớp người cao tuổi ra đi mà không kịp truyền dạy cho thế hệ kế tiếp.</p>
+
+<h2>Sâm Ngọc Linh — báu vật quốc gia</h2>
+<p>Trong số tất cả các loài thảo dược Tây Nguyên, Sâm Ngọc Linh (Panax vietnamensis) xứng đáng được gọi là báu vật quốc gia. Chỉ mọc ở độ cao từ 1.500m trở lên trên dãy núi Ngọc Linh thuộc địa phận Kon Tum và Quảng Nam, loài sâm này chứa hàm lượng saponin — hoạt chất chống oxy hóa và tăng cường miễn dịch — cao hơn cả sâm Hàn Quốc lẫn sâm Mỹ. Sau nhiều thập kỷ bị khai thác tự phát gần như kiệt quệ, hiện nay chính quyền tỉnh Kon Tum đã thiết lập vùng bảo tồn và khuyến khích người dân bản địa trồng sâm theo hướng bền vững.</p>
+
+<h2>Những thảo dược quý khác của đại ngàn</h2>
+<p>Ngoài sâm Ngọc Linh, Tây Nguyên còn có hàng chục loài thảo dược quý đang dần được khoa học chú ý. Lan kim tuyến (Anoectochilus setaceus) — loài lan mọc dưới tán rừng già — có tác dụng bổ thận, tăng sức đề kháng và điều trị các bệnh về gan. Cây đinh lăng Tây Nguyên mọc tự nhiên ở độ cao lớn cho hàm lượng hoạt chất vượt trội so với đinh lăng trồng ở đồng bằng. Nấm linh chi đỏ mọc trên thân cây gỗ mục ở rừng già Kon Tum từ lâu được người bản địa dùng để tăng cường sức khỏe, ngày nay được nghiên cứu về khả năng hỗ trợ điều trị ung thư.</p>
+
+<h2>Bảo tồn hay khai thác — bài toán khó của thời đại</h2>
+<p>Sức hút của thảo dược quý đang tạo ra áp lực khai thác khổng lồ lên hệ sinh thái rừng Tây Nguyên. Sâm Ngọc Linh giả bán tràn lan trên thị trường với giá từ một phần mười đến một phần năm mươi giá thật; nhiều loài dược liệu quý đang bị thu hái vô tội vạ không theo mùa vụ. Các chuyên gia khuyến nghị cần nhanh chóng xây dựng hệ thống chứng nhận nguồn gốc, bảo hộ địa lý và quan trọng hơn — ghi chép, hệ thống hóa tri thức y học bản địa trước khi những người già cuối cùng mang theo bí quyết của mình về với đại ngàn.</p>
+
+<h2>Hành trình tiếp nối</h2>
+<p>Tây Nguyên không chỉ là vùng đất của cà phê và cồng chiêng — đây còn là một kho tàng y học thiên nhiên đang chờ được khám phá, bảo tồn và phát huy đúng nghĩa. Mỗi chuyến đi vào rừng, mỗi cuộc trò chuyện với già làng, mỗi cây thảo dược được định danh là một bước nhỏ trong hành trình gìn giữ di sản thiên nhiên vô giá đó cho các thế hệ mai sau.</p>',
+  N'Dược liệu',
+  N'Kon Tum',
+  1
+),
+
+(
+  2,
+  N'Hội An – Nơi lưu giữ hồn vải dệt truyền thống',
+  N'Làng dệt lụa Mã Châu và làng gốm Thanh Hà là linh hồn của phố cổ Hội An',
+N'<h2>Mã Châu — 500 năm tiếng thoi không dứt</h2>
+<p>Cách Hội An 10 km về phía nam, làng lụa Mã Châu vẫn giữ nguyên tiếng thoi đưa lách cách, đều đặn như nhịp thở của một nền văn minh dệt vải đã tồn tại hơn 500 năm. Làng dệt Mã Châu thuộc thị xã Duy Xuyên, Quảng Nam, được hình thành từ khoảng thế kỷ 15–16, khi các thương nhân Nhật Bản, Trung Quốc và Bồ Đào Nha đổ về cảng thị Hội An tìm kiếm tơ lụa và gốm sứ. Thời kỳ cực thịnh thế kỷ 17–18, Mã Châu có hàng trăm khung dệt hoạt động suốt ngày đêm, cung cấp lụa và các loại vải quý cho cả vùng.</p>
+
+<h2>Nghệ thuật dệt thủ công — kiên nhẫn của bàn tay và trái tim</h2>
+<p>Để tạo ra một tấm lụa Mã Châu thực sự, người thợ cần trải qua ít nhất 12 công đoạn tỉ mỉ: từ việc nuôi tằm, ươm tơ, nhuộm màu bằng thảo mộc tự nhiên như lá bàng, củ nâu, vỏ cây vang — đến lên khung, mắc sợi, dệt và hoàn thiện. Một tấm lụa dài 5 mét rộng 0,6 mét đòi hỏi người thợ lành nghề làm việc liên tục trong 3–4 ngày. Hoa văn trên lụa Mã Châu thường là các họa tiết hoa cúc, hoa sen, chim phượng — những biểu tượng của văn hóa Á Đông được biến tấu theo phong cách duyên dáng của người Quảng.</p>
+
+<h2>Làng gốm Thanh Hà — đất và lửa ngàn năm</h2>
+<p>Cách Mã Châu khoảng 5 km, nằm bên bờ bắc sông Thu Bồn, làng gốm Thanh Hà là một di sản sống khác của vùng đất Hội An. Gốm Thanh Hà không phủ men như gốm Bát Tràng mà giữ nguyên màu đất nung đỏ au tự nhiên — đây chính là nét đặc trưng phân biệt gốm Thanh Hà với tất cả các dòng gốm khác tại Việt Nam. Những chiếc bình hoa, chậu cảnh, tượng nhỏ và đặc biệt là các loại lu, chum, vại dùng trong đời sống hằng ngày được tạo hình hoàn toàn bằng tay trên bàn xoay cổ truyền, nung trong lò củi theo kỹ thuật gia truyền.</p>
+
+<h2>Hội An — thành phố biết trân quý nghề cũ</h2>
+<p>Điều đáng trân trọng nhất ở Hội An không phải chỉ là vẻ đẹp của những ngôi nhà cổ hay những con đèn lồng rực rỡ — mà là thái độ của cộng đồng đối với di sản. Chính quyền thành phố đã có những chính sách thiết thực để hỗ trợ các nghệ nhân làng nghề: miễn giảm thuế, tổ chức các tour tham quan trải nghiệm dệt và làm gốm, kết nối nghệ nhân với thị trường trong và ngoài nước. Nhiều bạn trẻ thế hệ 8x, 9x tại Hội An đã chọn quay về học nghề thay vì theo đuổi công việc văn phòng ở thành phố lớn.</p>
+<h2>Thách thức trong thời đại công nghiệp</h2>
+<p>Dẫu vậy, con đường phía trước vẫn còn nhiều chông gai. Vải dệt công nghiệp giá rẻ cạnh tranh trực tiếp với lụa thủ công, trong khi chi phí nguyên liệu và công lao động ngày càng tăng khiến nhiều hộ dệt khó duy trì. Không ít gia đình đã buộc phải chuyển sang bán đồ lưu niệm giả cổ hoặc dịch vụ du lịch. Những nghệ nhân kiên trì giữ nghề dệt thuần túy ngày càng trở nên hiếm hoi — và quý giá hơn bao giờ hết.</p>
+
+<h2>Đến Hội An, đừng chỉ ngắm — hãy chạm vào</h2>
+<p>Nếu bạn có dịp đến Hội An, hãy dành nửa ngày để đến Mã Châu tự tay ngồi vào khung dệt, thử cảm giác điều khiển thoi qua từng hàng sợi tơ mỏng manh. Hãy đến Thanh Hà đặt bàn tay lên đất sét ướt và cảm nhận hình hài của một chiếc bình dần hiện ra dưới những ngón tay mình. Đó không chỉ là trải nghiệm du lịch — đó là khoảnh khắc bạn thực sự kết nối với linh hồn của một vùng đất.</p>',
+  N'Làng nghề',
+  N'Quảng Nam',
+  1
+);
+UPDATE BlogAmThuc
+SET hinhAnh = N'blogs/co_do_hue.jpg'
+WHERE maBlog = 1;
+UPDATE BlogAmThuc
+SET hinhAnh = N'blogs/bien_da_nang.jpg'
+WHERE maBLog = 2;
+UPDATE BlogAmThuc
+SET hinhAnh = N'blogs/Tra_hue.jpg'
+WHERE maBlog = 3;
+UPDATE BlogAmThuc
+SET hinhAnh = N'blogs/Tay_nguyen.jpg'
+WHERE maBlog = 4;
+UPDATE BlogAmThuc
+SET hinhAnh = N'blogs/Hoi_an.jpg'
+WHERE maBlog = 5;
+
+-- ► 12. BlogSanPham (sửa lại maSanPham đúng 1-19)
+INSERT INTO BlogSanPham (maBlog, maSanPham)
+VALUES
+(1, 1),   -- Blog Huế        → Bánh In Đậu Xanh Huế      (maSanPham=1)
+(1, 7),   -- Blog Huế        → Trà Sen Huế Thượng Hạng    (maSanPham=7)
+(2, 10),  -- Blog Đà Nẵng    → Mực Khô Lý Sơn             (maSanPham=10)
+(2, 11),  -- Blog Đà Nẵng    → Bò Một Nắng Phú Yên        (maSanPham=11)
+(3, 5),   -- Blog Trà        → Trà Xanh Cổ Thụ A Lưới     (maSanPham=5)
+(3, 7),   -- Blog Trà        → Trà Sen Huế Thượng Hạng    (maSanPham=7)
+(4, 16),  -- Blog Tây Nguyên → Đinh Lăng Rừng Quảng Bình  (maSanPham=16)
+(4, 17),  -- Blog Tây Nguyên → Cao Đinh Lăng Mật Ong      (maSanPham=17)
+(5, 19),  -- Blog Hội An     → Lụa Tơ Tằm Mã Châu         (maSanPham=19)
+(5, 14);  -- Blog Hội An     → Ấm Trà Gốm Thanh Hà        (maSanPham=14)

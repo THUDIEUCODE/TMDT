@@ -30,15 +30,15 @@ import { getImageUrl, handleImageError } from '../../utils/imageUtils'
 import './ProfilePage.css'
 
 const accountTabs = [
-  { id: 'info', label: 'ThÃ´ng tin cÃ¡ nhÃ¢n' },
-  { id: 'orders', label: 'ÄÆ¡n hÃ ng' },
-  { id: 'addresses', label: 'Äá»‹a chá»‰' },
-  { id: 'points', label: 'Äiá»ƒm tÃ­ch lÅ©y' },
-  { id: 'reviews', label: 'ÄÃ¡nh giÃ¡' },
-  { id: 'combos', label: 'Combo quÃ  táº·ng' },
+  { id: 'info', label: 'Thông tin cá nhân' },
+  { id: 'orders', label: 'Đơn hàng' },
+  { id: 'addresses', label: 'Địa chỉ' },
+  { id: 'points', label: 'Điểm tích lũy' },
+  { id: 'reviews', label: 'Đánh giá' },
+  { id: 'combos', label: 'Combo quà tặng' },
 ]
 
-const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}Ä‘`
+const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`
 const normalizeMockUser = (user) => ({
   ...user,
   name: user.name || user.hoTen || '',
@@ -47,7 +47,7 @@ const normalizeMockUser = (user) => ({
   address: user.diaChi || user.address || '',
   role: user.role || user.vaiTro || 'khachhang',
   loyaltyPoints: Number(user.loyaltyPoints || user.diemTichLuy || 0),
-  customerType: user.customerType || user.phanLoaiKhachHang || 'ThÃ¢n thiáº¿t',
+  customerType: user.customerType || user.phanLoaiKhachHang || 'Thân thiết',
   createdAt: user.createdAt || user.ngayDangKy || '',
 })
 const normalizeMockOrder = (order) => ({
@@ -66,9 +66,9 @@ const fallbackCombos = mockPurchasedCombos.map((combo) =>
     dipLe: combo.occasion,
     loiNhan: combo.message,
     trangThaiCombo:
-      combo.status === 'ÄÃ£ mua' || combo.status === 'Ã„ÂÃƒÂ£ mua'
+      combo.status === 'Đã mua' || combo.status === 'Đã mua'
         ? 'daDatHang'
-        : combo.status === 'ÄÃ£ há»§y'
+        : combo.status === 'Đã hủy'
           ? 'daHuy'
           : 'luuTam',
     tongTien: combo.total,
@@ -102,15 +102,15 @@ const fallbackReviews = mockOrders.flatMap((order) =>
 )
 
 const formatDate = (value) => {
-  if (!value) return 'Äang cáº­p nháº­t'
+  if (!value) return 'Đang cập nhật'
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('vi-VN')
 }
 
-const renderStars = (rating) => 'â˜…'.repeat(Math.max(0, Math.min(5, Number(rating || 0))))
+const renderStars = (rating) => '★'.repeat(Math.max(0, Math.min(5, Number(rating || 0))))
 
 const ReviewImage = ({ value, label }) => (
-  <img src={getImageUrl(value)} alt={label || 'SÃ¡ÂºÂ£n phÃ¡ÂºÂ©m'} onError={handleImageError} />
+  <img src={getImageUrl(value)} alt={label || 'Sản phẩm'} onError={handleImageError} />
 )
 
 function ProfilePage() {
@@ -307,7 +307,7 @@ function ProfilePage() {
     }
 
     if (!cancelReason.trim()) {
-      setOrdersError('Vui lÃ²ng nháº­p lÃ½ do há»§y Ä‘Æ¡n.')
+      setOrdersError('Vui lòng nhập lý do hủy đơn.')
       return
     }
 
@@ -317,12 +317,12 @@ function ProfilePage() {
       setCancelReason('')
       await loadOrders()
     } catch (error) {
-      setOrdersError(error?.message || 'KhÃ´ng thá»ƒ há»§y Ä‘Æ¡n hÃ ng.')
+      setOrdersError(error?.message || 'Không thể hủy đơn hàng.')
     }
   }
 
   const handleConfirmReceived = async (order) => {
-    if (!window.confirm('XÃ¡c nháº­n báº¡n Ä‘Ã£ nháº­n Ä‘Æ°á»£c hÃ ng?')) {
+    if (!window.confirm('Xác nhận bạn đã nhận được hàng?')) {
       return
     }
 
@@ -338,7 +338,7 @@ function ProfilePage() {
       await confirmReceived(order.id, { maNguoiDung })
       await loadOrders()
     } catch (error) {
-      setOrdersError(error?.message || 'KhÃ´ng thá»ƒ xÃ¡c nháº­n nháº­n hÃ ng.')
+      setOrdersError(error?.message || 'Không thể xác nhận nhận hàng.')
     }
   }
 
@@ -358,7 +358,7 @@ function ProfilePage() {
       })
       await loadOrders()
     } catch (error) {
-      setOrdersError(error?.message || 'KhÃ´ng thá»ƒ xÃ¡c nháº­n thanh toÃ¡n vÃ­.')
+      setOrdersError(error?.message || 'Không thể xác nhận thanh toán ví.')
     }
   }
 
@@ -398,9 +398,9 @@ function ProfilePage() {
       setProfileUser(normalizedUpdatedUser)
       localStorage.setItem('dacsan_user', JSON.stringify(normalizedUpdatedUser))
       window.dispatchEvent(new Event('auth-changed'))
-      setProfileMessage('Ã„ÂÃƒÂ£ cÃ¡ÂºÂ­p nhÃ¡ÂºÂ­t thÃƒÂ´ng tin cÃ¡ÂºÂ¡ nhÃƒÂ¢n.')
+      setProfileMessage('Đã cập nhật thông tin cá nhân.')
     } catch (error) {
-      setProfileError(error?.message || 'KhÃƒÂ´ng thÃ¡Â»Æ’ cÃ¡ÂºÂ­p nhÃ¡ÂºÂ­t thÃƒÂ´ng tin cÃƒÂ¡ nhÃƒÂ¢n.')
+      setProfileError(error?.message || 'Không thể cập nhật thông tin cá nhân.')
     } finally {
       setIsProfileSaving(false)
     }
@@ -412,7 +412,7 @@ function ProfilePage() {
     try {
       setSelectedCombo(await getComboById(combo.id))
     } catch (error) {
-      setCombosError(error?.message || 'KhÃ´ng thá»ƒ táº£i chi tiáº¿t combo.')
+      setCombosError(error?.message || 'Không thể tải chi tiết combo.')
     }
   }
 
@@ -432,18 +432,18 @@ function ProfilePage() {
       const comboItems = detailCombo.items || []
 
       if (comboItems.length === 0) {
-        setCombosError('Combo chÆ°a cÃ³ sáº£n pháº©m.')
+        setCombosError('Combo chưa có sản phẩm.')
         return
       }
 
-      if (!window.confirm('Báº¡n muá»‘n Ä‘Æ°a combo nÃ y vÃ o giá» hÃ ng vÃ  chuyá»ƒn sang thanh toÃ¡n?')) {
+      if (!window.confirm('Bạn muốn đưa combo này vào giỏ hàng và chuyển sang thanh toán?')) {
         return
       }
 
       try {
         await clearCart(maNguoiDung)
       } catch {
-        setCombosError('Há»‡ thá»‘ng Ä‘ang báº­n, vui lÃ²ng thá»­ láº¡i.')
+        setCombosError('Hệ thống đang bận, vui lòng thử lại.')
         return
       }
 
@@ -457,7 +457,7 @@ function ProfilePage() {
       setPendingCombo(detailCombo)
       navigate('/checkout')
     } catch (error) {
-      setCombosError(error?.message || 'KhÃ´ng thá»ƒ Ä‘Æ°a combo vÃ o giá» hÃ ng.')
+      setCombosError(error?.message || 'Không thể đưa combo vào giỏ hàng.')
     } finally {
       setIsCombosLoading(false)
     }
@@ -466,47 +466,47 @@ function ProfilePage() {
   const renderInfo = () => (
     <section className="profile-panel">
       <div className="profile-panel-heading">
-        <span>TÃ i khoáº£n</span>
-        <h2>ThÃ´ng tin cÃ¡ nhÃ¢n</h2>
+        <span>Tài khoản</span>
+        <h2>Thông tin cá nhân</h2>
       </div>
 
       <div className="profile-info-grid">
         <div>
-          <span>Há» vÃ  tÃªn</span>
-          <strong>{profileUser.name || 'KhÃ¡ch hÃ ng demo'}</strong>
+          <span>Họ và tên</span>
+          <strong>{profileUser.name || 'Khách hàng demo'}</strong>
         </div>
         <div>
           <span>Email</span>
-          <strong>{profileUser.email || 'Äang cáº­p nháº­t'}</strong>
+          <strong>{profileUser.email || 'Đang cập nhật'}</strong>
         </div>
         <div>
-          <span>Sá»‘ Ä‘iá»‡n thoáº¡i</span>
-          <strong>{profileUser.phone || 'Äang cáº­p nháº­t'}</strong>
+          <span>Số điện thoại</span>
+          <strong>{profileUser.phone || 'Đang cập nhật'}</strong>
         </div>
         <div>
-          <span>NgÃ y sinh</span>
-          <strong>{profileUser.birthday || 'Äang cáº­p nháº­t'}</strong>
+          <span>Ngày sinh</span>
+          <strong>{profileUser.birthday || 'Đang cập nhật'}</strong>
         </div>
         <div>
-          <span>Vai trÃ²</span>
+          <span>Vai trò</span>
           <strong>{profileUser.role || 'khachhang'}</strong>
         </div>
         <div>
-          <span>Äiá»ƒm tÃ­ch lÅ©y</span>
-          <strong>{Number(profileUser.loyaltyPoints || 0).toLocaleString('vi-VN')} Ä‘iá»ƒm</strong>
+          <span>Điểm tích lũy</span>
+          <strong>{Number(profileUser.loyaltyPoints || 0).toLocaleString('vi-VN')} điểm</strong>
         </div>
         <div>
-          <span>PhÃ¢n loáº¡i khÃ¡ch hÃ ng</span>
-          <strong>{profileUser.customerType || 'Äang cáº­p nháº­t'}</strong>
+          <span>Phân loại khách hàng</span>
+          <strong>{profileUser.customerType || 'Đang cập nhật'}</strong>
         </div>
         <div>
-          <span>NgÃ y Ä‘Äƒng kÃ½</span>
-          <strong>{profileUser.createdAt || 'Äang cáº­p nháº­t'}</strong>
+          <span>Ngày đăng ký</span>
+          <strong>{profileUser.createdAt || 'Đang cập nhật'}</strong>
         </div>
       </div>
       {hasUserApiError ? (
         <p className="product-result-summary">
-          KhÃ´ng káº¿t ná»‘i Ä‘Æ°á»£c backend, Ä‘ang dÃ¹ng thÃ´ng tin tÃ i khoáº£n lÆ°u cá»¥c bá»™ hoáº·c dá»¯ liá»‡u máº«u.
+          Không kết nối được backend, đang dùng thông tin tài khoản lưu cục bộ hoặc dữ liệu mẫu.
         </p>
       ) : null}
     </section>
@@ -516,8 +516,8 @@ function ProfilePage() {
     <section className="profile-panel">
       <div className="profile-panel-heading">
         <div>
-          <span>Lá»‹ch sá»­ mua hÃ ng</span>
-          <h2>ÄÆ¡n hÃ ng cá»§a tÃ´i</h2>
+          <span>Lịch sử mua hàng</span>
+          <h2>Đơn hàng của tôi</h2>
         </div>
       </div>
 
@@ -534,10 +534,10 @@ function ProfilePage() {
         ))}
       </div>
 
-      {isOrdersLoading ? <p className="product-result-summary">Äang táº£i Ä‘Æ¡n hÃ ng...</p> : null}
+      {isOrdersLoading ? <p className="product-result-summary">Đang tải đơn hàng...</p> : null}
       {hasOrdersApiError ? (
         <p className="product-result-summary">
-          KhÃ´ng káº¿t ná»‘i Ä‘Æ°á»£c backend, Ä‘ang dÃ¹ng dá»¯ liá»‡u máº«u.
+          Không kết nối được backend, đang dùng dữ liệu mẫu.
         </p>
       ) : null}
       {ordersError ? <p className="form-error">{ordersError}</p> : null}
@@ -554,7 +554,7 @@ function ProfilePage() {
               <div className="profile-order-main">
                 <div className="profile-order-title">
                   <div>
-                    <span>MÃ£ Ä‘Æ¡n hÃ ng</span>
+                    <span>Mã đơn hàng</span>
                     <strong>{order.id}</strong>
                   </div>
                   <span className={`status-badge status-${order.status}`}>
@@ -562,46 +562,46 @@ function ProfilePage() {
                   </span>
                 </div>
                 <p>
-                  {firstItem.name || 'ÄÆ¡n hÃ ng'}
-                  {otherItemCount > 0 ? ` vÃ  ${otherItemCount} sáº£n pháº©m khÃ¡c` : ''}
+                  {firstItem.name || 'Đơn hàng'}
+                  {otherItemCount > 0 ? ` và ${otherItemCount} sản phẩm khác` : ''}
                 </p>
                 <div className="profile-order-meta">
-                  <span>NgÃ y Ä‘áº·t: {order.orderDate}</span>
-                  <span>Tá»•ng tiá»n: {formatCurrency(order.total)}</span>
-                  <span>Thanh toÃ¡n: {paymentMethodLabels[order.paymentMethod] || order.paymentMethod}</span>
-                  <span>TT thanh toÃ¡n: {paymentStatusLabels[order.paymentStatus] || order.paymentStatus || 'Äang cáº­p nháº­t'}</span>
-                  <span>{order.items.length} sáº£n pháº©m</span>
+                  <span>Ngày đặt: {order.orderDate}</span>
+                  <span>Tổng tiền: {formatCurrency(order.total)}</span>
+                  <span>Thanh toán: {paymentMethodLabels[order.paymentMethod] || order.paymentMethod}</span>
+                  <span>TT thanh toán: {paymentStatusLabels[order.paymentStatus] || order.paymentStatus || 'Đang cập nhật'}</span>
+                  <span>{order.items.length} sản phẩm</span>
                 </div>
                 {order.paymentMethod === 'chuyenKhoan' && order.paymentStatus === 'choThanhToan' ? (
-                  <p className="product-result-summary">Chá» nhÃ¢n viÃªn xÃ¡c nháº­n chuyá»ƒn khoáº£n</p>
+                  <p className="product-result-summary">Chờ nhân viên xác nhận chuyển khoản</p>
                 ) : null}
                 {order.status === 'khachDaNhan' ? (
-                  <p className="product-result-summary">Chá» nhÃ¢n viÃªn hoÃ n táº¥t Ä‘Æ¡n</p>
+                  <p className="product-result-summary">Chờ nhân viên hoàn tất đơn</p>
                 ) : null}
               </div>
 
               <div className="profile-order-actions">
                 <Link className="button secondary" to={`/orders/${order.id}`}>
-                  Xem chi tiáº¿t
+                  Xem chi tiết
                 </Link>
                 {order.status === 'choXacNhan' ? (
                   <button type="button" onClick={() => setCancelTargetOrder(order)}>
-                    Há»§y Ä‘Æ¡n
+                    Hủy đơn
                   </button>
                 ) : null}
                 {order.status === 'daGiao' ? (
                   <button type="button" onClick={() => navigate(`/orders/${order.id}`)}>
-                    YÃªu cáº§u hoÃ n hÃ ng
+                    Yêu cầu hoàn hàng
                   </button>
                 ) : null}
                 {order.status === 'dangGiao' ? (
                   <button type="button" onClick={() => handleConfirmReceived(order)}>
-                    ÄÃ£ nháº­n hÃ ng
+                    Đã nhận hàng
                   </button>
                 ) : null}
                 {order.paymentMethod === 'vi' && order.paymentStatus === 'choThanhToan' ? (
                   <button type="button" onClick={() => handleConfirmWalletPayment(order)}>
-                    XÃ¡c nháº­n thanh toÃ¡n vÃ­
+                    Xác nhận thanh toán ví
                   </button>
                 ) : null}
               </div>
@@ -610,8 +610,8 @@ function ProfilePage() {
         })}
         {filteredOrders.length === 0 && !isOrdersLoading ? (
           <section className="empty-products">
-            <h2>ChÆ°a cÃ³ Ä‘Æ¡n hÃ ng phÃ¹ há»£p</h2>
-            <p>HÃ£y thá»­ chá»n tráº¡ng thÃ¡i khÃ¡c hoáº·c quay láº¡i mua sáº¯m.</p>
+            <h2>Chưa có đơn hàng phù hợp</h2>
+            <p>Hãy thử chọn trạng thái khác hoặc quay lại mua sắm.</p>
           </section>
         ) : null}
       </div>
@@ -621,18 +621,18 @@ function ProfilePage() {
   const renderAddresses = () => (
     <section className="profile-panel">
       <div className="profile-panel-heading">
-        <span>Giao hang</span>
-        <h2>Dia chi cua toi</h2>
+        <span>Giao hàng</span>
+        <h2>Địa chỉ của tôi</h2>
       </div>
       <div className="address-card">
-        <strong>{profileUser.name || 'Khach hang demo'}</strong>
-        <p>{profileUser.phone || 'Dang cap nhat'}</p>
-        <p>{profileUser.diaChi || profileUser.address || 'Dang cap nhat'}</p>
-        <span>Mac dinh</span>
+        <strong>{profileUser.name || 'Khách hàng demo'}</strong>
+        <p>{profileUser.phone || 'Đang cập nhật'}</p>
+        <p>{profileUser.diaChi || profileUser.address || 'Đang cập nhật'}</p>
+        <span>Mặc định</span>
       </div>
       <form className="profile-edit-form" onSubmit={saveProfile}>
         <label>
-          Ho va ten
+          Họ và tên
           <input value={profileForm.name} onChange={(event) => updateProfileField('name', event.target.value)} />
         </label>
         <label>
@@ -640,21 +640,21 @@ function ProfilePage() {
           <input value={profileForm.email} onChange={(event) => updateProfileField('email', event.target.value)} />
         </label>
         <label>
-          So dien thoai
+          Số điện thoại
           <input value={profileForm.phone} onChange={(event) => updateProfileField('phone', event.target.value)} />
         </label>
         <label>
-          Ngay sinh
+          Ngày sinh
           <input type="date" value={profileForm.birthday || ''} onChange={(event) => updateProfileField('birthday', event.target.value)} />
         </label>
         <label className="profile-edit-full">
-          Dia chi mac dinh
+          Địa chỉ mặc định
           <input value={profileForm.diaChi} onChange={(event) => updateProfileField('diaChi', event.target.value)} />
         </label>
         {profileError ? <p className="form-error profile-edit-full">{profileError}</p> : null}
         {profileMessage ? <p className="form-success profile-edit-full">{profileMessage}</p> : null}
         <button className="button profile-edit-full" type="submit" disabled={isProfileSaving}>
-          {isProfileSaving ? 'Dang luu...' : 'Luu thong tin'}
+          {isProfileSaving ? 'Đang lưu...' : 'Lưu thông tin'}
         </button>
       </form>
     </section>
@@ -663,25 +663,25 @@ function ProfilePage() {
   const renderPoints = () => (
     <section className="profile-panel points-panel">
       <div className="profile-panel-heading">
-        <span>Æ¯u Ä‘Ã£i thÃ nh viÃªn</span>
-        <h2>Äiá»ƒm tÃ­ch lÅ©y</h2>
+        <span>Ưu đãi thành viên</span>
+        <h2>Điểm tích lũy</h2>
       </div>
-      <strong>{Number(profileUser.loyaltyPoints || 0).toLocaleString('vi-VN')} Ä‘iá»ƒm</strong>
-      <p>DÃ¹ng Ä‘iá»ƒm Ä‘á»ƒ Ä‘á»•i voucher giáº£m giÃ¡ cho cÃ¡c Ä‘Æ¡n Ä‘áº·c sáº£n tiáº¿p theo.</p>
+      <strong>{Number(profileUser.loyaltyPoints || 0).toLocaleString('vi-VN')} điểm</strong>
+      <p>Dùng điểm để đổi voucher giảm giá cho các đơn đặc sản tiếp theo.</p>
     </section>
   )
 
   const renderReviews = () => (
     <section className="profile-panel">
       <div className="profile-panel-heading">
-        <span>Pháº£n há»“i</span>
-        <h2>ÄÃ¡nh giÃ¡ cá»§a tÃ´i</h2>
+        <span>Phản hồi</span>
+        <h2>Đánh giá của tôi</h2>
       </div>
 
-      {isReviewsLoading ? <p className="product-result-summary">Äang táº£i Ä‘Ã¡nh giÃ¡...</p> : null}
+      {isReviewsLoading ? <p className="product-result-summary">Đang tải đánh giá...</p> : null}
       {hasReviewsApiError ? (
         <p className="product-result-summary">
-          KhÃ´ng káº¿t ná»‘i Ä‘Æ°á»£c backend, Ä‘ang dÃ¹ng dá»¯ liá»‡u máº«u náº¿u cÃ³.
+          Không kết nối được backend, đang dùng dữ liệu mẫu nếu có.
         </p>
       ) : null}
       {reviewsError && !hasReviewsApiError ? <p className="form-error">{reviewsError}</p> : null}
@@ -696,12 +696,12 @@ function ProfilePage() {
               <div className="profile-review-title">
                 <strong>{review.productName}</strong>
                 <span className={`review-status-badge ${review.approved ? 'approved' : 'pending'}`}>
-                  {review.approved ? 'ÄÃ£ duyá»‡t' : 'Chá» duyá»‡t'}
+                  {review.approved ? 'Đã duyệt' : 'Chờ duyệt'}
                 </span>
               </div>
-              <small>{review.variantName || review.variant || 'Máº·c Ä‘á»‹nh'}</small>
+              <small>{review.variantName || review.variant || 'Mặc định'}</small>
               <b>{renderStars(review.rating)} <small>{Number(review.rating || 0)}/5</small></b>
-              <p>{review.content || 'KhÃ´ng cÃ³ ná»™i dung Ä‘Ã¡nh giÃ¡.'}</p>
+              <p>{review.content || 'Không có nội dung đánh giá.'}</p>
               <time>{formatDate(review.reviewDate)}</time>
             </div>
           </article>
@@ -709,7 +709,7 @@ function ProfilePage() {
 
         {reviews.length === 0 && !isReviewsLoading ? (
           <section className="empty-products">
-            <h2>Báº¡n chÆ°a cÃ³ Ä‘Ã¡nh giÃ¡ nÃ o.</h2>
+            <h2>Bạn chưa có đánh giá nào.</h2>
           </section>
         ) : null}
       </div>
@@ -719,14 +719,14 @@ function ProfilePage() {
   const renderCombos = () => (
     <section className="profile-panel">
       <div className="profile-panel-heading">
-        <span>QuÃ  táº·ng</span>
-        <h2>Combo cá»§a tÃ´i</h2>
+        <span>Quà tặng</span>
+        <h2>Combo của tôi</h2>
       </div>
 
-      {isCombosLoading ? <p className="product-result-summary">Äang táº£i combo...</p> : null}
+      {isCombosLoading ? <p className="product-result-summary">Đang tải combo...</p> : null}
       {hasCombosApiError ? (
         <p className="product-result-summary">
-          KhÃ´ng káº¿t ná»‘i Ä‘Æ°á»£c backend combo, Ä‘ang dÃ¹ng dá»¯ liá»‡u máº«u náº¿u cÃ³.
+          Không kết nối được backend combo, đang dùng dữ liệu mẫu nếu có.
         </p>
       ) : null}
       {combosError && !hasCombosApiError ? <p className="form-error">{combosError}</p> : null}
@@ -742,31 +742,25 @@ function ProfilePage() {
               <b>{comboStatusLabels[combo.trangThaiCombo] || combo.trangThaiCombo}</b>
             </div>
             <p>{combo.message}</p>
-            <p>{combo.loaiCombo || combo.type || 'Combo quÃ  táº·ng'}</p>
-            {combo.createdAt ? <p>NgÃ y táº¡o: {formatDate(combo.createdAt)}</p> : null}
+            <p>{combo.loaiCombo || combo.type || 'Combo quà tặng'}</p>
+            {combo.createdAt ? <p>Ngày tạo: {formatDate(combo.createdAt)}</p> : null}
             <ul>
               {(combo.items || []).slice(0, 3).map((item) => (
                 <li key={item.id}>{item.name} x {item.quantity}</li>
               ))}
             </ul>
-            <div className="profile-combo-footer">
-              <strong>{formatCurrency(combo.total)}</strong>
-              <button type="button" onClick={() => loadComboDetail(combo)}>
-                Xem chi tiáº¿t
-              </button>
-            </div>
             {combo.trangThaiCombo === 'luuTam' ? (
               <button type="button" onClick={() => orderComboNow(combo)}>
-                Äáº·t ngay
+                Đặt ngay
               </button>
             ) : null}
-            {combo.trangThaiCombo === 'daDatHang' ? <p>ÄÃ£ Ä‘áº·t hÃ ng</p> : null}
-            {combo.trangThaiCombo === 'daHuy' ? <p>ÄÃ£ há»§y</p> : null}
+            {combo.trangThaiCombo === 'daDatHang' ? <p>Đã đặt hàng</p> : null}
+            {combo.trangThaiCombo === 'daHuy' ? <p>Đã hủy</p> : null}
           </article>
         ))}
         {combos.length === 0 && !isCombosLoading ? (
           <section className="empty-products">
-            <h2>Báº¡n chÆ°a cÃ³ combo nÃ o.</h2>
+            <h2>Bạn chưa có combo nào.</h2>
           </section>
         ) : null}
       </div>
@@ -788,8 +782,8 @@ function ProfilePage() {
         <div className="profile-user">
           <span>{(profileUser.name || profileUser.email || 'U').charAt(0)}</span>
           <div>
-            <strong>{profileUser.name || 'KhÃ¡ch hÃ ng demo'}</strong>
-            <small>{profileUser.email || 'ChÆ°a Ä‘Äƒng nháº­p'}</small>
+            <strong>{profileUser.name || 'Khách hàng demo'}</strong>
+            <small>{profileUser.email || 'Chưa đăng nhập'}</small>
           </div>
         </div>
 
@@ -805,7 +799,7 @@ function ProfilePage() {
             </button>
           ))}
           <button type="button" onClick={handleLogout}>
-            ÄÄƒng xuáº¥t
+            Đăng xuất
           </button>
         </nav>
       </aside>
@@ -816,24 +810,24 @@ function ProfilePage() {
         <div className="profile-modal-backdrop" role="presentation">
           <form className="profile-modal" onSubmit={submitCancelOrder}>
             <div className="profile-panel-heading">
-              <span>Há»§y Ä‘Æ¡n hÃ ng</span>
+              <span>Hủy đơn hàng</span>
               <h2>{cancelTargetOrder.id}</h2>
             </div>
             <label>
-              LÃ½ do há»§y
+              Lý do hủy
               <input
                 required
                 value={cancelReason}
                 onChange={(event) => setCancelReason(event.target.value)}
-                placeholder="VÃ­ dá»¥: TÃ´i muá»‘n thay Ä‘á»•i Ä‘á»‹a chá»‰ giao hÃ ng"
+                placeholder="Ví dụ: Tôi muốn thay đổi địa chỉ giao hàng"
               />
             </label>
             <div className="modal-actions">
               <button type="button" onClick={() => setCancelTargetOrder(null)}>
-                ÄÃ³ng
+                Đóng
               </button>
               <button className="button" type="submit">
-                XÃ¡c nháº­n há»§y
+                Xác nhận hủy
               </button>
             </div>
           </form>
@@ -852,17 +846,17 @@ function ProfilePage() {
             <p>{selectedCombo.occasion}</p>
             <div className="combo-detail-list">
               {(selectedCombo.items || []).map((item) => (
-                <span key={item.id}>{item.name} Â· {item.variantName} x {item.quantity}</span>
+                <span key={item.id}>{item.name} · {item.variantName} x {item.quantity}</span>
               ))}
             </div>
-            <strong>Tá»•ng tiá»n: {formatCurrency(selectedCombo.total)}</strong>
+            <strong>Tổng tiền: {formatCurrency(selectedCombo.total)}</strong>
             <div className="modal-actions">
               <button type="button" onClick={() => setSelectedCombo(null)}>
-                ÄÃ³ng
+                Đóng
               </button>
               {selectedCombo.trangThaiCombo === 'luuTam' ? (
                 <button className="button" type="button" onClick={() => orderComboNow(selectedCombo)}>
-                  Äáº·t ngay
+                  Đặt ngay
                 </button>
               ) : null}
             </div>

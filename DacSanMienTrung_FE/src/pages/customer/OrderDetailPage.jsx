@@ -14,10 +14,12 @@ import {
 import { createReturnRequest } from '../../services/returnService'
 import { createReview } from '../../services/reviewService'
 import { getCurrentUserId } from '../../utils/authStorage'
+import { getImageUrl, handleImageError, isImageValue } from '../../utils/imageUtils'
 import '../../components/order/OrderStatusBadge.css'
 import './OrderDetailPage.css'
 
 const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`
+const getImageFallback = (value, fallback = 'SP') => String(value || fallback).slice(0, 2).toUpperCase()
 const formatDate = (value) => {
   if (!value) {
     return 'Đang cập nhật'
@@ -452,7 +454,13 @@ function OrderDetailPage() {
               {order.items.map((item) => (
                 <div className="order-item-row" key={item.id}>
                   <div className="order-item-product">
-                    <span>{item.image}</span>
+                    <span>
+                      {isImageValue(item.image) ? (
+                        <img src={getImageUrl(item.image)} alt={item.name} onError={handleImageError} />
+                      ) : (
+                        getImageFallback(item.image, item.name)
+                      )}
+                    </span>
                     <strong>{item.name}</strong>
                   </div>
                   <span>{item.variant}</span>

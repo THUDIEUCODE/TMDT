@@ -15,12 +15,40 @@ import {
   updateComboItem,
 } from '../../services/comboService'
 import { getProducts, mapProductFromApi } from '../../services/productService'
+import { getVariantsByProduct } from '../../services/variantService'
 import { getCurrentUserId } from '../../utils/authStorage'
+import { getImageUrl, handleImageError, isImageValue } from '../../utils/imageUtils'
 
 const fallbackProducts = mockProducts.map(mapProductFromApi)
 const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`
 
 const getFirstVariant = (product) => (product.variants || [])[0]
+const getImageFallback = (value, fallback = 'SP') => String(value || fallback).slice(0, 2).toUpperCase()
+
+const productNeedsVariantLookup = (product) => {
+  const variants = product.variants || []
+
+  return variants.length === 0 || (variants.length === 1 && String(variants[0].id || '').endsWith('-default'))
+}
+
+const enrichProductsWithVariants = async (products) => {
+  const enrichedProducts = await Promise.all(
+    products.map(async (product) => {
+      if (!productNeedsVariantLookup(product)) {
+        return product
+      }
+
+      try {
+        const variants = await getVariantsByProduct(product.id)
+        return variants.length > 0 ? { ...product, variants } : product
+      } catch {
+        return product
+      }
+    }),
+  )
+
+  return enrichedProducts
+}
 
 function ComboGiftPage() {
   const navigate = useNavigate()
@@ -62,13 +90,13 @@ function ComboGiftPage() {
       setIsProductsLoading(true)
 
       try {
-        const apiProducts = await getProducts()
+        const apiProducts = await enrichProductsWithVariants(await getProducts())
         if (!isMounted) return
         setProducts(apiProducts)
         setHasProductApiError(false)
       } catch {
         if (!isMounted) return
-        setProducts(fallbackProducts)
+        setProducts(await enrichProductsWithVariants(fallbackProducts))
         setHasProductApiError(true)
       } finally {
         if (isMounted) setIsProductsLoading(false)
@@ -365,10 +393,17 @@ function ComboGiftPage() {
           <div className="combo-product-grid">
             {filteredProducts.map((product) => {
               const variant = getSelectedVariant(product)
+              const productImage = variant?.image || product.hinhAnh || product.image
 
               return (
                 <article className="combo-product-item" key={product.id}>
-                  <div className="combo-product-image">{product.image}</div>
+                  <div className="combo-product-image">
+                    {isImageValue(productImage) ? (
+                      <img src={getImageUrl(productImage)} alt={product.name} onError={handleImageError} />
+                    ) : (
+                      <span>{getImageFallback(productImage, product.name)}</span>
+                    )}
+                  </div>
                   <h3>{product.name}</h3>
                   <p>{product.province} · {product.subCategory}</p>
                   <select value={variant?.id || ''} onChange={(event) => setSelectedVariants((current) => ({ ...current, [product.id]: event.target.value }))}>
@@ -411,7 +446,13 @@ function ComboGiftPage() {
               <div className="combo-review-items">
                 {comboItems.map((item) => (
                   <article className="combo-selected-item" key={item.id}>
-                    <span className="combo-selected-avatar">{item.image}</span>
+                    <span className="combo-selected-avatar">
+                      {isImageValue(item.image) ? (
+                        <img src={getImageUrl(item.image)} alt={item.name} onError={handleImageError} />
+                      ) : (
+                        getImageFallback(item.image, item.name)
+                      )}
+                    </span>
                     <p className="combo-selected-info">
                       <strong>{item.name}</strong>
                       <small>{item.variantName}</small>

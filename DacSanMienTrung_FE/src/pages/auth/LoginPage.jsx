@@ -4,24 +4,6 @@ import { login } from '../../services/authService'
 import { canAccessPath, getDefaultPathForRole, saveAuth } from '../../utils/authStorage'
 import './LoginPage.css'
 
-const demoAccounts = [
-  {
-    label: 'TK 1 - Quản trị',
-    email: 'admin.an@dacsan.vn',
-    matKhau: '$2b$10$hashedpw1',
-  },
-  {
-    label: 'TK 3 - Nhân viên',
-    email: 'nv.chau@dacsan.vn',
-    matKhau: '$2b$10$hashedpw3',
-  },
-  {
-    label: 'TK 5 - Khách hàng',
-    email: 'lan.hoang@gmail.com',
-    matKhau: '$2b$10$hashedpw5',
-  },
-]
-
 function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -78,28 +60,6 @@ function LoginPage() {
     }
   }
 
-  const handleDemoLogin = async (account) => {
-    try {
-      setIsSubmitting(true)
-      setMessage('')
-      setFormData((current) => ({
-        ...current,
-        account: account.email,
-        password: account.matKhau,
-      }))
-
-      const response = await login({
-        email: account.email,
-        matKhau: account.matKhau,
-      })
-      finishLogin(response)
-    } catch (error) {
-      setMessage(error?.message || 'Đăng nhập demo thất bại. Vui lòng kiểm tra dữ liệu SQL.')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
   return (
     <section className="login-page">
       <div className="login-visual">
@@ -119,7 +79,7 @@ function LoginPage() {
 
       <div className="login-card">
         <Link to="/" className="login-brand">
-          <span>MT</span>
+          <img src="/images/brand/logo-mark.png" alt="Đặc Sản Miền Trung" />
           <strong>Đặc Sản Miền Trung</strong>
         </Link>
 
@@ -170,23 +130,6 @@ function LoginPage() {
             {isSubmitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </button>
         </form>
-
-        <div className="login-demo">
-          <span>Đăng nhập nhanh để test</span>
-          <div className="login-demo-actions">
-            {demoAccounts.map((account) => (
-              <button
-                className="login-demo-button"
-                key={account.email}
-                type="button"
-                disabled={isSubmitting}
-                onClick={() => handleDemoLogin(account)}
-              >
-                {account.label}
-              </button>
-            ))}
-          </div>
-        </div>
 
         <p className="login-register">
           Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link>

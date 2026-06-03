@@ -11,9 +11,11 @@ import {
   returnStatusOptions,
 } from '../../services/returnService'
 import { getCurrentUser } from '../../utils/authStorage'
+import { getImageUrl, handleImageError, isImageValue } from '../../utils/imageUtils'
 import './ReturnManagementPage.css'
 
 const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`
+const getImageFallback = (value, fallback = 'SP') => String(value || fallback).slice(0, 2).toUpperCase()
 const formatDate = (value) => {
   if (!value) {
     return 'Đang cập nhật'
@@ -436,7 +438,13 @@ function ReturnManagementPage() {
               <h3>Ảnh minh chứng</h3>
               {detailReturn.proofImage ? (
                 <div>
-                  <span>{detailReturn.proofImage}</span>
+                  <span>
+                    {isImageValue(detailReturn.proofImage) ? (
+                      <img src={getImageUrl(detailReturn.proofImage)} alt="Ảnh minh chứng" onError={handleImageError} />
+                    ) : (
+                      detailReturn.proofImage
+                    )}
+                  </span>
                 </div>
               ) : (
                 <p>Không có ảnh minh chứng.</p>
@@ -447,7 +455,13 @@ function ReturnManagementPage() {
               <h3>Sản phẩm yêu cầu hoàn</h3>
               {(detailReturn.items || []).map((item) => (
                 <div className="return-item-row" key={item.id}>
-                  <span className="return-item-image">{item.image || 'SP'}</span>
+                  <span className="return-item-image">
+                    {isImageValue(item.image) ? (
+                      <img src={getImageUrl(item.image)} alt={item.name} onError={handleImageError} />
+                    ) : (
+                      getImageFallback(item.image, item.name)
+                    )}
+                  </span>
                   <strong>{item.name}</strong>
                   <span>{item.variant}</span>
                   <span>Mua: {item.quantity}</span>

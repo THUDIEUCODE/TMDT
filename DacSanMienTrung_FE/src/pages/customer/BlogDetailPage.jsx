@@ -6,6 +6,7 @@ import { mockBlogs } from '../../data/mockBlogs'
 import { mockProducts } from '../../data/mockProducts'
 import { getBlogById, mapBlogFromApi } from '../../services/blogService'
 import { getProductById, mapProductFromApi } from '../../services/productService'
+import { sanitizeHtmlContent } from '../../utils/htmlContent'
 import { getImageUrl, handleImageError } from '../../utils/imageUtils'
 
 const fallbackBlogs = mockBlogs.map(mapBlogFromApi)
@@ -84,6 +85,7 @@ function BlogDetailPage() {
   }
 
   const relatedBlogs = fallbackBlogs.filter((item) => item.id !== blog.id && item.topic === blog.topic).slice(0, 3)
+  const blogContentHtml = sanitizeHtmlContent(blog.content)
 
   return (
     <div className="blog-detail-page">
@@ -115,7 +117,7 @@ function BlogDetailPage() {
           </div>
           <h1>{blog.title}</h1>
           <p className="blog-detail-description">{blog.description}</p>
-          <p>{blog.content}</p>
+          <div className="blog-detail-body" dangerouslySetInnerHTML={{ __html: blogContentHtml }} />
           <Link className="button secondary" to="/blogs">
             Quay lại danh sách blog
           </Link>

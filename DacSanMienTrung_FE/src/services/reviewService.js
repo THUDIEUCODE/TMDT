@@ -1,3 +1,4 @@
+import { resolveProductImage } from '../utils/imageUtils'
 import { deleteApi, getApi, postApi, putApi } from './apiClient'
 
 const getPayload = (payload) => payload?.data ?? payload
@@ -22,6 +23,14 @@ export const mapReviewFromApi = (apiReview = {}) => {
     [review.trongLuong, review.quyCachDongGoi].filter(Boolean).join(' - ') ||
     'Mặc định'
 
+  const rawImage =
+    review.hinhAnhSanPham ||
+    review.hinhAnhBienThe ||
+    review.hinhAnh ||
+    review.productImage ||
+    review.variantImage ||
+    ''
+
   return {
     ...review,
     id: String(id ?? ''),
@@ -33,9 +42,7 @@ export const mapReviewFromApi = (apiReview = {}) => {
     productId: review.maSanPham ?? review.productId ?? '',
     productName,
     productImage:
-      review.hinhAnhSanPham ||
-      review.hinhAnh ||
-      review.productImage ||
+      resolveProductImage(productName, rawImage) ||
       String(productName)
         .trim()
         .split(/\s+/)

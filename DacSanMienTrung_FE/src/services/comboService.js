@@ -1,3 +1,4 @@
+import { resolveProductImage } from '../utils/imageUtils'
 import { deleteApi, getApi, postApi, putApi } from './apiClient'
 
 const getPayload = (payload) => payload?.data ?? payload
@@ -52,6 +53,14 @@ export const mapComboItemFromApi = (item = {}) => {
     'Mặc định'
   const quantity = Number(item.soLuong ?? item.quantity ?? 1)
   const price = Number(item.donGia ?? item.giaBan ?? item.price ?? 0)
+  const rawImage =
+    item.hinhAnh ??
+    item.hinhAnhSanPham ??
+    item.hinhAnhBienThe ??
+    item.image ??
+    item.productImage ??
+    item.variantImage ??
+    ''
 
   return {
     ...item,
@@ -66,7 +75,7 @@ export const mapComboItemFromApi = (item = {}) => {
     soLuong: quantity,
     price,
     note: item.ghiChu ?? item.note ?? '',
-    image: item.hinhAnh ?? item.image ?? productName.slice(0, 2).toUpperCase(),
+    image: resolveProductImage(productName, rawImage) || productName.slice(0, 2).toUpperCase(),
     total: Number(item.thanhTien ?? item.total ?? price * quantity),
   }
 }

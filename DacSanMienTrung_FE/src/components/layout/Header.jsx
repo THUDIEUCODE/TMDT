@@ -47,7 +47,7 @@ function Header() {
 
       <div className="container header-inner">
         <NavLink to="/" className="brand">
-          <span className="brand-mark">MT</span>
+          <img className="brand-logo" src="/images/brand/logo-mark.png" alt="Đặc Sản Miền Trung" />
           <span>
             <strong>Đặc Sản Miền Trung</strong>
             <small>DacSanMienTrung.vn</small>

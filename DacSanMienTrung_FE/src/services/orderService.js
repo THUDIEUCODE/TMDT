@@ -1,3 +1,4 @@
+import { resolveProductImage } from '../utils/imageUtils'
 import { getApi, postApi, putApi } from './apiClient'
 
 const getPayload = (payload) => payload?.data ?? payload
@@ -89,6 +90,14 @@ const mapOrderItemFromApi = (item = {}) => {
   const productName = item.tenSanPham ?? item.name ?? 'Sản phẩm'
   const price = Number(item.donGia ?? item.price ?? 0)
   const quantity = Number(item.soLuong ?? item.quantity ?? 1)
+  const rawImage =
+    item.hinhAnh ||
+    item.hinhAnhSanPham ||
+    item.hinhAnhBienThe ||
+    item.image ||
+    item.productImage ||
+    item.variantImage ||
+    ''
 
   return {
     ...item,
@@ -98,7 +107,7 @@ const mapOrderItemFromApi = (item = {}) => {
     productId: String(item.maSanPham ?? item.productId ?? ''),
     variantId: String(item.maBienThe ?? item.variantId ?? ''),
     name: productName,
-    image: item.hinhAnh || item.image || createInitials(productName),
+    image: resolveProductImage(productName, rawImage) || createInitials(productName),
     variant:
       item.variant ||
       item.variantName ||

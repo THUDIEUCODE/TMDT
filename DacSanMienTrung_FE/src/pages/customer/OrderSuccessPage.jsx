@@ -8,9 +8,11 @@ import {
   paymentStatusLabels,
 } from '../../services/orderService'
 import { getCurrentUserId } from '../../utils/authStorage'
+import { getImageUrl, handleImageError, isImageValue } from '../../utils/imageUtils'
 
 const latestOrderStorageKey = 'latestOrder'
 const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`
+const getImageFallback = (value, fallback = 'SP') => String(value || fallback).slice(0, 2).toUpperCase()
 
 const getStoredOrder = () => {
   try {
@@ -241,7 +243,13 @@ function OrderSuccessPage() {
               <div className="checkout-mini-items order-success-items">
                 {order.items.map((item) => (
                   <div key={item.id}>
-                    <span>{item.image}</span>
+                    <span>
+                      {isImageValue(item.image) ? (
+                        <img src={getImageUrl(item.image)} alt={item.name} onError={handleImageError} />
+                      ) : (
+                        getImageFallback(item.image, item.name)
+                      )}
+                    </span>
                     <p>
                       <strong>{item.name}</strong>
                       <small>{item.variant} x {item.quantity}</small>

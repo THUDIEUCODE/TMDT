@@ -155,9 +155,7 @@ function HomePage() {
         </div>
 
         <div className="hero-visual" aria-hidden="true">
-          <div className="hero-plate">
-            <span>{slide.visual}</span>
-          </div>
+          <img className="hero-plate" src="/images/brand/banner-round.png" alt="" />
         </div>
 
         <div className="hero-dots">

@@ -94,16 +94,12 @@
   color: var(--color-red);
 }
 
-.login-brand span {
+.login-brand img {
   width: 44px;
   height: 44px;
-  display: grid;
-  place-items: center;
-  color: var(--color-orange);
-  background: var(--color-red);
-  border: 3px solid var(--color-orange);
+  display: block;
+  object-fit: contain;
   border-radius: 50%;
-  font-weight: 900;
 }
 
 .login-heading {
@@ -209,50 +205,6 @@
   width: 100%;
 }
 
-.login-demo {
-  display: grid;
-  gap: 10px;
-  padding: 14px;
-  background: var(--color-cream);
-  border: 1px dashed var(--color-border);
-  border-radius: 12px;
-}
-
-.login-demo > span {
-  color: var(--color-purple);
-  font-size: 13px;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.login-demo-actions {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.login-demo-button {
-  min-height: 40px;
-  padding: 0 10px;
-  color: var(--color-red);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.login-demo-button:hover {
-  color: #fff;
-  background: var(--color-red);
-  border-color: var(--color-red);
-}
-
-.login-demo-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.65;
-}
-
 @media (max-width: 900px) {
   .login-page {
     grid-template-columns: 1fr;
@@ -283,7 +235,4 @@
     padding: 22px;
   }
 
-  .login-demo-actions {
-    grid-template-columns: 1fr;
-  }
 }
