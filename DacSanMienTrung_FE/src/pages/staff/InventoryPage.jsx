@@ -12,9 +12,11 @@ import {
   variantStatusLabels,
 } from '../../services/inventoryService'
 import { mapProductFromApi } from '../../services/productService'
+import { getImageUrl, handleImageError, isImageValue } from '../../utils/imageUtils'
 import './InventoryPage.css'
 
 const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`
+const getImageFallback = (value, fallback = 'SP') => String(value || fallback).slice(0, 2).toUpperCase()
 const formatDate = (value) => {
   if (!value) {
     return 'Không có'
@@ -424,10 +426,10 @@ function InventoryPage() {
           {filteredItems.map((item) => (
             <article className="inventory-table-row" key={item.id}>
               <div className="inventory-image">
-                {item.image && String(item.image).startsWith('http') ? (
-                  <img src={item.image} alt={item.productName} />
+                {isImageValue(item.image) ? (
+                  <img src={getImageUrl(item.image)} alt={item.productName} onError={handleImageError} />
                 ) : (
-                  item.image || 'SP'
+                  getImageFallback(item.image, item.productName)
                 )}
               </div>
               <strong>{item.productName}</strong>

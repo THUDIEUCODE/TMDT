@@ -35,17 +35,23 @@ public class ReviewServiceImpl implements ReviewService {
         DonHang order = item.getDonHang();
 
         if (!order.getNguoiDung().getMaNguoiDung().equals(request.getMaNguoiDung())) {
-            throw new BadRequestException("Chi tiết đơn hàng không thuộc người dùng này");
+            throw new BadRequestException("Chi tiet don hang khong thuoc nguoi dung nay");
         }
         if (!ORDER_STATUS_DA_GIAO.equals(order.getTrangThaiDonHang())) {
-            throw new BadRequestException("Chỉ có thể đánh giá sản phẩm trong đơn hàng đã giao");
+            throw new BadRequestException("Chi co the danh gia san pham trong don hang da giao");
+        }
+        if (request.getSoSao() == null || request.getSoSao() < 1 || request.getSoSao() > 5) {
+            throw new BadRequestException("So sao phai tu 1 den 5");
+        }
+        if (request.getNoiDungDanhGia() == null || request.getNoiDungDanhGia().isBlank()) {
+            throw new BadRequestException("Noi dung danh gia khong duoc rong");
         }
         if (item.getSoSao() != null || (item.getNoiDungDanhGia() != null && !item.getNoiDungDanhGia().isBlank())) {
-            throw new BadRequestException("Sản phẩm trong đơn hàng này đã được đánh giá");
+            throw new BadRequestException("San pham trong don hang nay da duoc danh gia");
         }
 
         item.setSoSao(request.getSoSao());
-        item.setNoiDungDanhGia(request.getNoiDungDanhGia());
+        item.setNoiDungDanhGia(request.getNoiDungDanhGia().trim());
         item.setNgayDanhGia(LocalDateTime.now());
         item.setDaKiemDuyetDanhGia(false);
 
@@ -54,7 +60,7 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ReviewResponse> getApprovedReviewsByProduct(Integer maSanPham) {
+    public List<ReviewResponse> getReviewsByProduct(Integer maSanPham) {
         return chiTietDonHangRepository
                 .findByBienThe_SanPham_MaSanPhamAndSoSaoIsNotNullAndDaKiemDuyetDanhGiaTrue(maSanPham)
                 .stream()
@@ -78,7 +84,7 @@ public class ReviewServiceImpl implements ReviewService {
             case "pending" -> chiTietDonHangRepository.findBySoSaoIsNotNullAndDaKiemDuyetDanhGiaFalseOrderByNgayDanhGiaDesc();
             case "approved" -> chiTietDonHangRepository.findBySoSaoIsNotNullAndDaKiemDuyetDanhGiaTrueOrderByNgayDanhGiaDesc();
             case "" -> chiTietDonHangRepository.findBySoSaoIsNotNullOrderByNgayDanhGiaDesc();
-            default -> throw new BadRequestException("Trạng thái đánh giá không hợp lệ: " + status);
+            default -> throw new BadRequestException("Trang thai danh gia khong hop le: " + status);
         };
 
         return reviews.stream()
@@ -106,24 +112,24 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional
-    public ReviewResponse deleteReview(Integer maChiTietDonHang) {
+    public void deleteReview(Integer maChiTietDonHang) {
         ChiTietDonHang item = getReview(maChiTietDonHang);
         item.setSoSao(null);
         item.setNoiDungDanhGia(null);
         item.setNgayDanhGia(null);
         item.setDaKiemDuyetDanhGia(false);
-        return toResponse(chiTietDonHangRepository.save(item));
+        chiTietDonHangRepository.save(item);
     }
 
     private ChiTietDonHang getOrderItem(Integer maChiTietDonHang) {
         return chiTietDonHangRepository.findByMaChiTietDonHang(maChiTietDonHang)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chi tiết đơn hàng với mã: " + maChiTietDonHang));
+                .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay chi tiet don hang voi ma: " + maChiTietDonHang));
     }
 
     private ChiTietDonHang getReview(Integer maChiTietDonHang) {
         ChiTietDonHang item = getOrderItem(maChiTietDonHang);
         if (item.getSoSao() == null) {
-            throw new ResourceNotFoundException("Không tìm thấy đánh giá với mã chi tiết đơn hàng: " + maChiTietDonHang);
+            throw new ResourceNotFoundException("Khong tim thay danh gia voi ma chi tiet don hang: " + maChiTietDonHang);
         }
         return item;
     }

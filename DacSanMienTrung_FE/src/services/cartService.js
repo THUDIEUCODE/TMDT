@@ -1,3 +1,4 @@
+import { resolveProductImage } from '../utils/imageUtils'
 import { deleteApi, getApi, postApi, putApi } from './apiClient'
 
 const getArrayPayload = (payload) => {
@@ -50,6 +51,14 @@ export const mapCartItemFromApi = (apiItem = {}) => {
   const price = Number(apiItem.donGia ?? apiItem.price ?? 0)
   const quantity = Number(apiItem.soLuong ?? apiItem.quantity ?? 1)
   const total = Number(apiItem.thanhTien ?? apiItem.total ?? price * quantity)
+  const rawImage =
+    apiItem.hinhAnh ||
+    apiItem.hinhAnhSanPham ||
+    apiItem.hinhAnhBienThe ||
+    apiItem.image ||
+    apiItem.productImage ||
+    apiItem.variantImage ||
+    ''
 
   return {
     ...apiItem,
@@ -60,7 +69,8 @@ export const mapCartItemFromApi = (apiItem = {}) => {
     name,
     variantName,
     variantLabel: variantName,
-    image: apiItem.hinhAnh || apiItem.image || createInitials(name),
+    hinhAnh: rawImage,
+    image: resolveProductImage(name, rawImage) || createInitials(name),
     price,
     quantity,
     total,

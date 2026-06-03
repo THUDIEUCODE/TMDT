@@ -14,6 +14,7 @@ import com.example.dacsanmientrung_backend.entity.DonHang;
 import com.example.dacsanmientrung_backend.entity.GioHang;
 import com.example.dacsanmientrung_backend.entity.NguoiDung;
 import com.example.dacsanmientrung_backend.entity.SanPham;
+import com.example.dacsanmientrung_backend.entity.Voucher;
 import com.example.dacsanmientrung_backend.exception.BadRequestException;
 import com.example.dacsanmientrung_backend.exception.ResourceNotFoundException;
 import com.example.dacsanmientrung_backend.repository.BienTheRepository;
@@ -21,11 +22,14 @@ import com.example.dacsanmientrung_backend.repository.ChiTietDonHangRepository;
 import com.example.dacsanmientrung_backend.repository.DonHangRepository;
 import com.example.dacsanmientrung_backend.repository.GioHangRepository;
 import com.example.dacsanmientrung_backend.repository.NguoiDungRepository;
+import com.example.dacsanmientrung_backend.repository.VoucherRepository;
 import com.example.dacsanmientrung_backend.service.DonHangService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
@@ -45,6 +49,8 @@ public class DonHangServiceImpl implements DonHangService {
     private static final String PAYMENT_COD = "COD";
     private static final String PAYMENT_CHUYEN_KHOAN = "chuyenKhoan";
     private static final String PAYMENT_VI = "vi";
+    private static final String VOUCHER_TYPE_PERCENT = "phanTram";
+    private static final String VOUCHER_TYPE_AMOUNT = "soTien";
     private static final Set<String> VALID_ORDER_STATUSES = Set.of(
             STATUS_CHO_XAC_NHAN,
             STATUS_DA_XAC_NHAN,
@@ -61,19 +67,22 @@ public class DonHangServiceImpl implements DonHangService {
     private final GioHangRepository gioHangRepository;
     private final NguoiDungRepository nguoiDungRepository;
     private final BienTheRepository bienTheRepository;
+    private final VoucherRepository voucherRepository;
 
     public DonHangServiceImpl(
             DonHangRepository donHangRepository,
             ChiTietDonHangRepository chiTietDonHangRepository,
             GioHangRepository gioHangRepository,
             NguoiDungRepository nguoiDungRepository,
-            BienTheRepository bienTheRepository
+            BienTheRepository bienTheRepository,
+            VoucherRepository voucherRepository
     ) {
         this.donHangRepository = donHangRepository;
         this.chiTietDonHangRepository = chiTietDonHangRepository;
         this.gioHangRepository = gioHangRepository;
         this.nguoiDungRepository = nguoiDungRepository;
         this.bienTheRepository = bienTheRepository;
+        this.voucherRepository = voucherRepository;
     }
 
     @Override
@@ -90,7 +99,12 @@ public class DonHangServiceImpl implements DonHangService {
         BigDecimal tongTienHang = cartItems.stream()
                 .map(item -> item.getDonGia().multiply(BigDecimal.valueOf(item.getSoLuong())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+        Voucher voucher = null;
         BigDecimal tienGiam = BigDecimal.ZERO;
+        if (request.getMaVoucher() != null) {
+            voucher = validateVoucherForOrder(request.getMaVoucher(), tongTienHang);
+            tienGiam = calculateVoucherDiscount(voucher, tongTienHang);
+        }
         BigDecimal phiVanChuyen = request.getPhiVanChuyen() != null ? request.getPhiVanChuyen() : BigDecimal.ZERO;
         BigDecimal tongThanhToan = tongTienHang.subtract(tienGiam).add(phiVanChuyen);
 
@@ -134,6 +148,11 @@ public class DonHangServiceImpl implements DonHangService {
         }
 
         gioHangRepository.deleteByNguoiDung_MaNguoiDung(request.getMaNguoiDung());
+
+        if (voucher != null) {
+            voucher.setSoLuongTon(Math.max(voucher.getSoLuongTon() - 1, 0));
+            voucherRepository.save(voucher);
+        }
 
         return getOrderById(savedOrder.getMaDonHang());
     }
@@ -347,6 +366,49 @@ public class DonHangServiceImpl implements DonHangService {
         if (bienThe.getSoLuongTon() == null || bienThe.getSoLuongTon() < quantity) {
             throw new BadRequestException("Tồn kho không đủ cho biến thể: " + bienThe.getMaBienThe());
         }
+    }
+
+    private Voucher validateVoucherForOrder(Integer maVoucher, BigDecimal tongTienHang) {
+        Voucher voucher = voucherRepository.findById(maVoucher)
+                .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay voucher voi ma: " + maVoucher));
+
+        if (!Boolean.TRUE.equals(voucher.getTrangThai())) {
+            throw new BadRequestException("Voucher da bi tat");
+        }
+
+        if (voucher.getSoLuongTon() == null || voucher.getSoLuongTon() <= 0) {
+            throw new BadRequestException("Voucher da het luot su dung");
+        }
+
+        if (voucher.getNgayHetHan() == null || voucher.getNgayHetHan().isBefore(LocalDate.now())) {
+            throw new BadRequestException("Voucher da het han");
+        }
+
+        if (voucher.getNgayBatDau() != null && voucher.getNgayBatDau().isAfter(LocalDate.now())) {
+            throw new BadRequestException("Voucher chua den ngay ap dung");
+        }
+
+        BigDecimal minimum = voucher.getDonHangToiThieu() != null ? voucher.getDonHangToiThieu() : BigDecimal.ZERO;
+        if (tongTienHang.compareTo(minimum) < 0) {
+            throw new BadRequestException("Don hang chua dat gia tri toi thieu de ap dung voucher");
+        }
+
+        return voucher;
+    }
+
+    private BigDecimal calculateVoucherDiscount(Voucher voucher, BigDecimal tongTienHang) {
+        BigDecimal discount;
+
+        if (VOUCHER_TYPE_PERCENT.equals(voucher.getLoaiGiam())) {
+            discount = tongTienHang.multiply(voucher.getGiaTriGiam())
+                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+        } else if (VOUCHER_TYPE_AMOUNT.equals(voucher.getLoaiGiam())) {
+            discount = voucher.getGiaTriGiam();
+        } else {
+            throw new BadRequestException("Loai giam voucher khong hop le: " + voucher.getLoaiGiam());
+        }
+
+        return discount.compareTo(tongTienHang) > 0 ? tongTienHang : discount;
     }
 
     private void restoreStock(DonHang donHang) {

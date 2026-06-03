@@ -24,6 +24,19 @@ function LoginPage() {
     }))
   }
 
+  const finishLogin = (response) => {
+    const user = saveAuth(response)
+    const redirectPath = searchParams.get('redirect')
+    const defaultPath = getDefaultPathForRole(user.role)
+    const nextPath =
+      redirectPath && redirectPath.startsWith('/') && canAccessPath(user.role, redirectPath)
+        ? redirectPath
+        : defaultPath
+
+    setMessage('Đăng nhập thành công.')
+    navigate(nextPath)
+  }
+
   const handleSubmit = async (event) => {
     event.preventDefault()
 
@@ -39,15 +52,7 @@ function LoginPage() {
         email: formData.account.trim(),
         matKhau: formData.password,
       })
-      const user = saveAuth(response)
-      const redirectPath = searchParams.get('redirect')
-      const defaultPath = getDefaultPathForRole(user.role)
-      const nextPath =
-        redirectPath && redirectPath.startsWith('/') && canAccessPath(user.role, redirectPath)
-          ? redirectPath
-          : defaultPath
-      setMessage('Đăng nhập thành công.')
-      navigate(nextPath)
+      finishLogin(response)
     } catch (error) {
       setMessage(error?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.')
     } finally {
@@ -74,7 +79,7 @@ function LoginPage() {
 
       <div className="login-card">
         <Link to="/" className="login-brand">
-          <span>MT</span>
+          <img src="/images/brand/logo-mark.png" alt="Đặc Sản Miền Trung" />
           <strong>Đặc Sản Miền Trung</strong>
         </Link>
 

@@ -39,6 +39,9 @@ public class NguoiDung {
     @Column(name = "soDienThoai", length = 11)
     private String soDienThoai;
 
+    @Column(name = "diaChi", columnDefinition = "NVARCHAR(MAX)")
+    private String diaChi;
+
     @Column(name = "ngaySinh")
     private LocalDate ngaySinh;
 

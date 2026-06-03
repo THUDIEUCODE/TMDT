@@ -57,9 +57,9 @@ public class BlogServiceImpl implements BlogService {
 
     @Override
     @Transactional(readOnly = true)
-    public BlogDetailResponse getPublicBlogById(Integer maBlog) {
-        BlogAmThuc blog = blogAmThucRepository.findByMaBlogAndTrangThaiTrue(maBlog)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy blog với mã: " + maBlog));
+    public BlogDetailResponse getBlogById(Integer maBlog) {
+        BlogAmThuc blog = blogAmThucRepository.findByMaBlog(maBlog)
+                .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay blog voi ma: " + maBlog));
         return toDetailResponse(blog);
     }
 
@@ -149,7 +149,7 @@ public class BlogServiceImpl implements BlogService {
 
     private void applyRequest(BlogAmThuc blog, BlogRequest request) {
         if (request.getTieuDe() == null || request.getTieuDe().isBlank()) {
-            throw new BadRequestException("Tiêu đề không được rỗng");
+            throw new BadRequestException("Tieu de khong duoc rong");
         }
         blog.setTieuDe(request.getTieuDe().trim());
         blog.setMoTa(request.getMoTa());
@@ -169,7 +169,7 @@ public class BlogServiceImpl implements BlogService {
         Set<Integer> uniqueProductIds = new LinkedHashSet<>(productIds);
         for (Integer productId : uniqueProductIds) {
             SanPham product = sanPhamRepository.findById(productId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy sản phẩm với mã: " + productId));
+                    .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay san pham voi ma: " + productId));
 
             BlogSanPham blogSanPham = new BlogSanPham();
             blogSanPham.setBlogAmThuc(blog);
@@ -229,15 +229,15 @@ public class BlogServiceImpl implements BlogService {
 
     private BlogAmThuc getBlog(Integer maBlog) {
         return blogAmThucRepository.findByMaBlog(maBlog)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy blog với mã: " + maBlog));
+                .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay blog voi ma: " + maBlog));
     }
 
     private NguoiDung getAuthor(Integer maTacGia) {
         if (maTacGia == null) {
-            throw new BadRequestException("Mã tác giả không được rỗng");
+            throw new BadRequestException("Ma tac gia khong duoc rong");
         }
         return nguoiDungRepository.findById(maTacGia)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tác giả với mã: " + maTacGia));
+                .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay tac gia voi ma: " + maTacGia));
     }
 
     private boolean matchesKeyword(BlogAmThuc blog, String keyword) {

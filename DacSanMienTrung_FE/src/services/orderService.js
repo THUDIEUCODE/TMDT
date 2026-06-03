@@ -1,3 +1,4 @@
+import { resolveProductImage } from '../utils/imageUtils'
 import { getApi, postApi, putApi } from './apiClient'
 
 const getPayload = (payload) => payload?.data ?? payload
@@ -89,6 +90,14 @@ const mapOrderItemFromApi = (item = {}) => {
   const productName = item.tenSanPham ?? item.name ?? 'Sản phẩm'
   const price = Number(item.donGia ?? item.price ?? 0)
   const quantity = Number(item.soLuong ?? item.quantity ?? 1)
+  const rawImage =
+    item.hinhAnh ||
+    item.hinhAnhSanPham ||
+    item.hinhAnhBienThe ||
+    item.image ||
+    item.productImage ||
+    item.variantImage ||
+    ''
 
   return {
     ...item,
@@ -98,7 +107,7 @@ const mapOrderItemFromApi = (item = {}) => {
     productId: String(item.maSanPham ?? item.productId ?? ''),
     variantId: String(item.maBienThe ?? item.variantId ?? ''),
     name: productName,
-    image: item.hinhAnh || item.image || createInitials(productName),
+    image: resolveProductImage(productName, rawImage) || createInitials(productName),
     variant:
       item.variant ||
       item.variantName ||
@@ -110,6 +119,9 @@ const mapOrderItemFromApi = (item = {}) => {
     total: Number(item.thanhTien ?? item.total ?? price * quantity),
     rating: item.soSao ?? item.rating ?? null,
     reviewContent: item.noiDungDanhGia ?? item.reviewContent ?? '',
+    reviewDate: item.ngayDanhGia ?? item.reviewDate ?? '',
+    reviewApproved: Boolean(item.daKiemDuyetDanhGia ?? item.reviewApproved ?? false),
+    daKiemDuyetDanhGia: Boolean(item.daKiemDuyetDanhGia ?? item.reviewApproved ?? false),
   }
 }
 
@@ -121,6 +133,8 @@ export const mapOrderFromApi = (apiOrder = {}) => {
   const shippingFee = Number(order.phiVanChuyen ?? order.shippingFee ?? 0)
   const discount = Number(order.tienGiam ?? order.discount ?? 0)
   const total = Number(order.tongThanhToan ?? order.total ?? Math.max(subtotal - discount + shippingFee, 0))
+  const voucherId = order.maVoucher ?? order.voucherId ?? null
+  const voucherCode = order.maCodeVoucher ?? order.voucherCode ?? order.maCode ?? ''
   const address =
     order.diaChiGiaoHang ||
     order.shippingAddress ||
@@ -147,6 +161,10 @@ export const mapOrderFromApi = (apiOrder = {}) => {
     processedBy: order.maNhanVienXuLy ?? order.nhanVienXuLy ?? order.processedBy ?? '',
     processingNote: order.ghiChuXuLy ?? order.processingNote ?? '',
     note: order.ghiChuGiaoHang ?? order.ghiChu ?? order.note ?? '',
+    voucherId,
+    maVoucher: voucherId,
+    voucherCode,
+    maCodeVoucher: voucherCode,
     cancelReason: order.lyDoHuy ?? order.cancelReason ?? '',
     returnReason: order.lyDoHoanHang ?? order.returnReason ?? '',
     returnStatus: order.trangThaiHoanHang ?? order.returnStatus ?? 'khongCo',

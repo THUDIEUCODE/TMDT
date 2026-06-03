@@ -26,4 +26,5 @@ public class RegisterRequest {
     private String matKhau;
 
     private String soDienThoai;
+    private String diaChi;
 }

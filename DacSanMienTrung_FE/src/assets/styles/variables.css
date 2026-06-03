@@ -16,6 +16,6 @@
   --shadow-md: 0 18px 38px rgba(108, 52, 131, 0.16);
   --radius: 14px;
   --container: 1180px;
-  --font-main: Arial, Helvetica, sans-serif;
-  --font-display: Georgia, 'Times New Roman', serif;
+  --font-main: 'Be Vietnam Pro', Arial, Helvetica, sans-serif;
+  --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
 }

@@ -39,7 +39,17 @@ async function requestApi(path, options = {}) {
     return null
   }
 
-  return response.json()
+  const responseText = await response.text()
+
+  if (!responseText) {
+    return null
+  }
+
+  try {
+    return JSON.parse(responseText)
+  } catch {
+    return responseText
+  }
 }
 
 export const getApi = (path) => requestApi(path)

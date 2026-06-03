@@ -33,6 +33,7 @@ import AdminDashboardPage from '../pages/admin/AdminDashboardPage'
 import AccountManagementPage from '../pages/admin/AccountManagementPage'
 import VoucherManagementPage from '../pages/admin/VoucherManagementPage'
 import ReportPage from '../pages/admin/ReportPage'
+import ReportPrintPage from '../pages/admin/ReportPrintPage'
 
 const customerRoles = ['khachhang', 'nhanvien', 'quantrivien']
 const staffRoles = ['nhanvien', 'quantrivien']
@@ -142,6 +143,7 @@ function AppRoutes() {
             <Route path="accounts" element={<AccountManagementPage />} />
             <Route path="vouchers" element={<VoucherManagementPage />} />
             <Route path="reports" element={<ReportPage />} />
+            <Route path="reports/print" element={<ReportPrintPage />} />
           </Route>
         </Route>
       </Routes>

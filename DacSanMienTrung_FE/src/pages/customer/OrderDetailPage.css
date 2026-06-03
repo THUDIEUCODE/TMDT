@@ -186,10 +186,18 @@
   height: 52px;
   display: grid;
   place-items: center;
+  overflow: hidden;
   color: var(--color-cream);
   background: linear-gradient(135deg, var(--color-purple), var(--color-red));
   border-radius: 12px;
   font-weight: 900;
+}
+
+.order-item-product span img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .order-item-row strong {
@@ -216,6 +224,34 @@
   display: grid;
   gap: 4px;
   margin: 0;
+}
+
+.order-review-summary {
+  display: grid;
+  gap: 5px;
+}
+
+.order-review-summary strong {
+  color: var(--color-orange);
+  letter-spacing: 0;
+}
+
+.review-status-badge {
+  width: fit-content;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.review-status-badge.pending {
+  color: #8a4d00;
+  background: #fff2c6;
+}
+
+.review-status-badge.approved {
+  color: #166534;
+  background: #dcfce7;
 }
 
 .order-item-actions small,

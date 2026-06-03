@@ -94,16 +94,12 @@
   color: var(--color-red);
 }
 
-.login-brand span {
+.login-brand img {
   width: 44px;
   height: 44px;
-  display: grid;
-  place-items: center;
-  color: var(--color-orange);
-  background: var(--color-red);
-  border: 3px solid var(--color-orange);
+  display: block;
+  object-fit: contain;
   border-radius: 50%;
-  font-weight: 900;
 }
 
 .login-heading {
@@ -238,4 +234,5 @@
   .login-card {
     padding: 22px;
   }
+
 }

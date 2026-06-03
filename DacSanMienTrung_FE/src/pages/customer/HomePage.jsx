@@ -8,6 +8,8 @@ import { mockCombos } from '../../data/mockCombos'
 import { mockProducts } from '../../data/mockProducts'
 import { getRootCategories } from '../../services/categoryService'
 import { getProducts } from '../../services/productService'
+import { getActiveVouchers } from '../../services/voucherService'
+import { getImageUrl, handleImageError } from '../../utils/imageUtils'
 
 const heroSlides = [
   {
@@ -39,11 +41,24 @@ const heroSlides = [
 const isRootCategory = (category) => category.parentId === null || category.parentId === undefined
 const rootMockCategories = mockCategories.filter(isRootCategory)
 const getCategoryPath = (category) => `/categories/${category.id ?? category.slug}`
+const pendingVoucherStorageKey = 'dacsan_pending_voucher_code'
+const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`
+const formatVoucherDiscount = (voucher) =>
+  voucher.discountType === 'phanTram'
+    ? `${Number(voucher.discountValue || 0).toLocaleString('vi-VN')}%`
+    : formatCurrency(voucher.discountValue)
+const formatDate = (value) => {
+  if (!value) return 'Đang cập nhật'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('vi-VN')
+}
 
 function HomePage() {
   const [activeSlide, setActiveSlide] = useState(0)
   const [products, setProducts] = useState(mockProducts)
   const [categories, setCategories] = useState(rootMockCategories)
+  const [vouchers, setVouchers] = useState([])
+  const [voucherMessage, setVoucherMessage] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [hasApiError, setHasApiError] = useState(false)
   const bestSellingProducts = products.slice(0, 8)
@@ -55,7 +70,11 @@ function HomePage() {
 
     const loadHomeData = async () => {
       try {
-        const [apiProducts, apiCategories] = await Promise.all([getProducts(), getRootCategories()])
+        const [apiProducts, apiCategories, apiVouchers] = await Promise.all([
+          getProducts(),
+          getRootCategories(),
+          getActiveVouchers().catch(() => []),
+        ])
 
         if (!isMounted) {
           return
@@ -63,6 +82,7 @@ function HomePage() {
 
         setProducts(apiProducts.length > 0 ? apiProducts : mockProducts)
         setCategories(apiCategories.length > 0 ? apiCategories : rootMockCategories)
+        setVouchers(apiVouchers.slice(0, 4))
         setHasApiError(false)
       } catch {
         if (!isMounted) {
@@ -71,6 +91,7 @@ function HomePage() {
 
         setProducts(mockProducts)
         setCategories(rootMockCategories)
+        setVouchers([])
         setHasApiError(true)
       } finally {
         if (isMounted) {
@@ -92,6 +113,24 @@ function HomePage() {
 
   const showNextSlide = () => {
     setActiveSlide((current) => (current + 1) % heroSlides.length)
+  }
+
+  const copyVoucherCode = async (code) => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(code)
+      }
+      setVoucherMessage('Đã sao chép mã voucher.')
+    } catch {
+      setVoucherMessage(`Mã voucher: ${code}`)
+    }
+  }
+
+  const handleUseVoucherNow = (code) => {
+    localStorage.setItem(pendingVoucherStorageKey, code)
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(code).catch(() => undefined)
+    }
   }
 
   return (
@@ -116,9 +155,7 @@ function HomePage() {
         </div>
 
         <div className="hero-visual" aria-hidden="true">
-          <div className="hero-plate">
-            <span>{slide.visual}</span>
-          </div>
+          <img className="hero-plate" src="/images/brand/banner-round.png" alt="" />
         </div>
 
         <div className="hero-dots">
@@ -143,12 +180,54 @@ function HomePage() {
         <div className="category-grid">
           {featuredCategories.map((category, index) => (
             <Link className="category-card" key={category.id} to={getCategoryPath(category)}>
-              <span>{String(index + 1).padStart(2, '0')}</span>
+              <div className="category-card-media">
+                <img
+                  src={getImageUrl(category.hinhAnh || category.image)}
+                  alt={category.name}
+                  onError={handleImageError}
+                />
+                <span>{String(index + 1).padStart(2, '0')}</span>
+              </div>
               <strong>{category.name}</strong>
             </Link>
           ))}
         </div>
       </section>
+
+      {vouchers.length > 0 ? (
+        <section className="home-section voucher-offer-section">
+          <div className="section-heading centered">
+            <span>Ưu đãi</span>
+            <h2>Voucher đang áp dụng</h2>
+            <p>Sao chép mã ưu đãi và dùng khi đặt hàng để nhận giảm giá trực tiếp.</p>
+          </div>
+          {voucherMessage ? <p className="product-result-summary">{voucherMessage}</p> : null}
+          <div className="home-voucher-grid">
+            {vouchers.map((voucher, index) => (
+              <article className={`home-voucher-card voucher-tone-${(index % 4) + 1}`} key={voucher.id}>
+                <div className="home-voucher-main">
+                  <span>{voucher.discountTypeLabel}</span>
+                  <strong>{formatVoucherDiscount(voucher)}</strong>
+                  <p>Cho đơn từ {formatCurrency(voucher.minOrderValue)}</p>
+                </div>
+                <h3>{voucher.code}</h3>
+                <p>Đơn tối thiểu {formatCurrency(voucher.minOrderValue)}</p>
+                <small>
+                  Còn {Number(voucher.quantity || 0).toLocaleString('vi-VN')} lượt - hết hạn {formatDate(voucher.endDate)}
+                </small>
+                <div className="home-voucher-actions">
+                  <button type="button" onClick={() => copyVoucherCode(voucher.code)}>
+                    Sao chép mã
+                  </button>
+                  <Link className="button" to="/cart" onClick={() => handleUseVoucherNow(voucher.code)}>
+                    Dùng ngay
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section className="home-section">
         <div className="section-heading centered">

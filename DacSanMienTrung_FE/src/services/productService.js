@@ -1,3 +1,4 @@
+import { resolveProductImage } from '../utils/imageUtils'
 import { deleteApi, getApi, postApi, putApi } from './apiClient'
 
 const getPayload = (payload) => payload?.data ?? payload
@@ -69,7 +70,7 @@ const mapVariantFromApi = (variant = {}, productId) => {
     price: Number(variant.giaBan ?? variant.gia ?? variant.price ?? 0),
     stock: Number(variant.soLuongTon ?? variant.tonKho ?? variant.stock ?? 0),
     expiryDate: variant.hanSuDung ?? variant.expiryDate ?? '',
-    image: variant.hinhAnh ?? variant.image ?? '',
+    image: variant.hinhAnh ?? variant.hinhAnhBienThe ?? variant.image ?? variant.variantImage ?? '',
     status: normalizeStatus(variant.trangThai ?? variant.status),
   }
 }
@@ -81,18 +82,26 @@ export const mapProductFromApi = (apiProduct = {}) => {
   const categoryId = product.maDanhMuc ?? product.categoryId ?? product.categorySlug ?? ''
   const categoryName = product.tenDanhMuc ?? product.categoryName ?? product.category ?? product.subCategory ?? ''
   const province = product.tenTinh ?? product.province ?? product.origin ?? ''
-  const price = Number(product.giaBanThapNhat ?? product.giaBan ?? product.price ?? 0)
-  const listedPrice = Number(product.giaNiemYet ?? product.listedPrice ?? product.oldPrice ?? price)
   const apiVariants = product.bienThes ?? product.bienThe ?? product.variants
   const variants = Array.isArray(apiVariants)
     ? apiVariants.map((variant) => mapVariantFromApi(variant, id))
     : []
+  const variantPrices = variants.map((variant) => Number(variant.price || 0)).filter((value) => value > 0)
+  const variantMinPrice = variantPrices.length > 0 ? Math.min(...variantPrices) : undefined
+  const listedPriceValue = Number(product.giaNiemYet ?? product.listedPrice ?? product.oldPrice ?? 0)
+  const price = Number(product.giaBanThapNhat ?? product.giaBan ?? product.price ?? variantMinPrice ?? listedPriceValue ?? 0)
+  const listedPrice = Number(product.giaNiemYet ?? product.listedPrice ?? product.oldPrice ?? price)
   const stock = Number(
     product.tongTonKho ??
       product.stock ??
       variants.reduce((total, variant) => total + Number(variant.stock || 0), 0),
   )
   const status = normalizeStatus(product.trangThai ?? product.status)
+  const hinhAnh = product.hinhAnh ?? product.hinhAnhSanPham ?? product.image ?? product.productImage ?? ''
+  const resolvedImage = resolveProductImage(name, hinhAnh)
+  const hinhAnhs = Array.isArray(product.hinhAnhs)
+    ? [...product.hinhAnhs].sort((a, b) => Number(a.thuTu ?? 0) - Number(b.thuTu ?? 0))
+    : []
 
   return {
     ...product,
@@ -107,8 +116,10 @@ export const mapProductFromApi = (apiProduct = {}) => {
     province,
     origin: province,
     region: product.vungMien ?? product.region ?? '',
-    image: product.hinhAnh || product.image || createInitials(name),
-    imageUrl: product.hinhAnh || product.imageUrl || '',
+    hinhAnh: resolvedImage || hinhAnh,
+    hinhAnhs,
+    image: resolvedImage || hinhAnh || product.image || createInitials(name),
+    imageUrl: resolvedImage || hinhAnh || product.imageUrl || '',
     listedPrice,
     price,
     oldPrice: listedPrice,
@@ -162,8 +173,18 @@ export const getProducts = async (filters = {}) => {
   return getArrayPayload(payload).map(mapProductFromApi)
 }
 
+export const getManageProducts = async (filters = {}) => {
+  const payload = await getApi(`/products/manage${buildQueryString(filters)}`)
+  return getArrayPayload(payload).map(mapProductFromApi)
+}
+
 export const getProductById = async (id) => {
   const payload = await getApi(`/products/${id}`)
+  return mapProductFromApi(payload)
+}
+
+export const getManageProductById = async (id) => {
+  const payload = await getApi(`/products/manage/${id}`)
   return mapProductFromApi(payload)
 }
 

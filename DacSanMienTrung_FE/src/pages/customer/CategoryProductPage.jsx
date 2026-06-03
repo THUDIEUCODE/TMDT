@@ -5,6 +5,7 @@ import { mockCategories } from '../../data/mockCategories'
 import { mockProducts } from '../../data/mockProducts'
 import { getCategoryById, getChildCategories } from '../../services/categoryService'
 import { getProductsByCategoryTree } from '../../services/productService'
+import { getImageUrl, handleImageError } from '../../utils/imageUtils'
 
 const isNumericId = (value) => /^\d+$/.test(String(value || ''))
 const normalizeId = (value) => String(value ?? '')
@@ -204,6 +205,7 @@ function CategoryProductPage() {
     const childOptions = childCategories.map((child) => ({
       id: normalizeId(child.id),
       name: child.name,
+      slug: normalizeId(child.slug),
     }))
     const typeOptions = productTypes
       .filter((type) => !childOptions.some((child) => child.name === type))
@@ -212,18 +214,39 @@ function CategoryProductPage() {
     return [...childOptions, ...typeOptions]
   }, [childCategories, productTypes])
 
+  const selectedSubCategoryOption = useMemo(() => {
+    if (selectedSubCategory === 'all') {
+      return null
+    }
+
+    return subCategoryOptions.find((option) => normalizeId(option.id) === normalizeId(selectedSubCategory)) || null
+  }, [selectedSubCategory, subCategoryOptions])
+
   const filteredProducts = useMemo(() => {
     const keyword = searchText.trim().toLowerCase()
     const products = categoryProducts.filter((product) => {
+      const selectedSubCategoryKeys = new Set(
+        [
+          selectedSubCategory,
+          selectedSubCategoryOption?.id,
+          selectedSubCategoryOption?.slug,
+          selectedSubCategoryOption?.name,
+        ]
+          .filter(Boolean)
+          .map(normalizeId),
+      )
       const matchesSearch =
         product.name.toLowerCase().includes(keyword) ||
-        (product.province || '').toLowerCase().includes(keyword)
+        (product.province || product.origin || '').toLowerCase().includes(keyword)
       const matchesSubCategory =
         selectedSubCategory === 'all' ||
-        normalizeId(product.categoryId) === selectedSubCategory ||
-        product.categorySlug === selectedSubCategory ||
-        product.subCategory === selectedSubCategory
-      const matchesProvince = selectedProvince === 'all' || product.province === selectedProvince
+        selectedSubCategoryKeys.has(normalizeId(product.categoryId)) ||
+        selectedSubCategoryKeys.has(normalizeId(product.categorySlug)) ||
+        selectedSubCategoryKeys.has(normalizeId(product.categoryName)) ||
+        selectedSubCategoryKeys.has(normalizeId(product.category)) ||
+        selectedSubCategoryKeys.has(normalizeId(product.subCategory))
+      const productProvince = product.province || product.origin || ''
+      const matchesProvince = selectedProvince === 'all' || productProvince === selectedProvince
       const matchesType = selectedType === 'all' || product.subCategory === selectedType
       const matchesPrice = isInPriceRange(product, selectedPrice)
 
@@ -235,6 +258,7 @@ function CategoryProductPage() {
     categoryProducts,
     searchText,
     selectedSubCategory,
+    selectedSubCategoryOption,
     selectedProvince,
     selectedPrice,
     selectedType,
@@ -298,9 +322,16 @@ function CategoryProductPage() {
       </div>
 
       <section className="category-title-panel">
-        <span>{productCount} sản phẩm</span>
-        <h1>{category.name}</h1>
-        <p>{category.description || 'Đang cập nhật mô tả danh mục.'}</p>
+        <div className="category-title-copy">
+          <span>{productCount} san pham</span>
+          <h1>{category.name}</h1>
+          <p>{category.description || 'Dang cap nhat mo ta danh muc.'}</p>
+        </div>
+        <img
+          src={getImageUrl(category.hinhAnh || category.image)}
+          alt={category.name}
+          onError={handleImageError}
+        />
       </section>
 
       {childCategories.length > 0 ? (

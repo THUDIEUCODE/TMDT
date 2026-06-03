@@ -9,6 +9,10 @@ import java.util.Optional;
 
 public interface SanPhamRepository extends JpaRepository<SanPham, Integer> {
 
+    @Override
+    @EntityGraph(attributePaths = {"danhMuc", "bienThes"})
+    List<SanPham> findAll();
+
     @EntityGraph(attributePaths = {"danhMuc", "bienThes"})
     List<SanPham> findByTrangThaiTrue();
 

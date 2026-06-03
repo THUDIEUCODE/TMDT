@@ -30,4 +30,5 @@ public class SanPhamDetailResponse {
     private String hinhAnh;
     private Boolean trangThai;
     private List<BienTheResponse> bienThes;
+    private List<HinhAnhSanPhamResponse> hinhAnhs;
 }

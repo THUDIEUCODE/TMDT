@@ -9,7 +9,7 @@ public interface ReviewService {
 
     ReviewResponse createReview(CreateReviewRequest request);
 
-    List<ReviewResponse> getApprovedReviewsByProduct(Integer maSanPham);
+    List<ReviewResponse> getReviewsByProduct(Integer maSanPham);
 
     List<ReviewResponse> getReviewsByUser(Integer maNguoiDung);
 
@@ -19,5 +19,5 @@ public interface ReviewService {
 
     ReviewResponse hideReview(Integer maChiTietDonHang);
 
-    ReviewResponse deleteReview(Integer maChiTietDonHang);
+    void deleteReview(Integer maChiTietDonHang);
 }

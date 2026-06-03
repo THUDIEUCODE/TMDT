@@ -14,6 +14,7 @@ public class DanhMucRequest {
     private Integer maDanhMucCha;
     private String tenDanhMuc;
     private String moTa;
+    private String hinhAnh;
     private Integer thuTuHienThi;
     private Boolean trangThai;
 }

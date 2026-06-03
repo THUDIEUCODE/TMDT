@@ -8,7 +8,7 @@ function Footer() {
       <div className="container footer-grid">
         <div>
           <div className="footer-brand">
-            <span className="brand-mark">MT</span>
+            <img className="brand-logo" src="/images/brand/logo-mark.png" alt="Đặc Sản Miền Trung" />
             <strong>Đặc Sản Miền Trung</strong>
           </div>
           <p>

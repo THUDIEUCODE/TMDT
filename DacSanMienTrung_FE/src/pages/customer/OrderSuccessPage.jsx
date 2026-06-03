@@ -8,9 +8,11 @@ import {
   paymentStatusLabels,
 } from '../../services/orderService'
 import { getCurrentUserId } from '../../utils/authStorage'
+import { getImageUrl, handleImageError, isImageValue } from '../../utils/imageUtils'
 
 const latestOrderStorageKey = 'latestOrder'
 const formatCurrency = (value) => `${Number(value || 0).toLocaleString('vi-VN')}đ`
+const getImageFallback = (value, fallback = 'SP') => String(value || fallback).slice(0, 2).toUpperCase()
 
 const getStoredOrder = () => {
   try {
@@ -56,8 +58,14 @@ function OrderSuccessPage() {
 
     try {
       const apiOrder = await getOrderById(orderId)
-      setOrder(apiOrder)
-      localStorage.setItem(latestOrderStorageKey, JSON.stringify(apiOrder))
+      const storedOrder = getStoredOrder()
+      const orderWithVoucher = {
+        ...apiOrder,
+        voucherCode: apiOrder.voucherCode || storedOrder?.voucherCode || '',
+        maCodeVoucher: apiOrder.maCodeVoucher || storedOrder?.maCodeVoucher || storedOrder?.voucherCode || '',
+      }
+      setOrder(orderWithVoucher)
+      localStorage.setItem(latestOrderStorageKey, JSON.stringify(orderWithVoucher))
       setHasApiError(false)
     } catch {
       setOrder((currentOrder) => currentOrder || getStoredOrder())
@@ -107,6 +115,14 @@ function OrderSuccessPage() {
       setIsConfirmingWallet(false)
     }
   }
+
+  const voucherCode = order?.voucherCode || order?.maCodeVoucher || order?.maCode || ''
+  const hasVoucher = Boolean(
+    order?.maVoucher ||
+      order?.voucherId ||
+      voucherCode ||
+      Number(order?.discount ?? order?.tienGiam ?? 0) > 0,
+  )
 
   if (!order && !isLoading) {
     return (
@@ -215,11 +231,25 @@ function OrderSuccessPage() {
               </div>
             ) : null}
 
+            {hasVoucher ? (
+              <div className="payment-note">
+                <h3>Voucher đã áp dụng</h3>
+                <p>Mã {voucherCode || order.maVoucher || order.voucherId} đã được áp dụng cho đơn hàng này.</p>
+                <p>Giảm giá: {formatCurrency(order.discount ?? order.tienGiam)}</p>
+              </div>
+            ) : null}
+
             {order.items?.length > 0 ? (
               <div className="checkout-mini-items order-success-items">
                 {order.items.map((item) => (
                   <div key={item.id}>
-                    <span>{item.image}</span>
+                    <span>
+                      {isImageValue(item.image) ? (
+                        <img src={getImageUrl(item.image)} alt={item.name} onError={handleImageError} />
+                      ) : (
+                        getImageFallback(item.image, item.name)
+                      )}
+                    </span>
                     <p>
                       <strong>{item.name}</strong>
                       <small>{item.variant} x {item.quantity}</small>

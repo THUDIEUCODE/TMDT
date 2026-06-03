@@ -1,9 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { mockPurchasedCombos } from '../../data/mockCombos'
 import { mockOrders } from '../../data/mockOrders'
 import { mockCurrentUser } from '../../data/mockUsers'
 import { getUserById } from '../../services/authService'
+import { addToCart, clearCart } from '../../services/cartService'
+import {
+  comboStatusLabels,
+  getComboById,
+  getCombosByUser,
+  mapComboFromApi,
+  setPendingCombo,
+} from '../../services/comboService'
 import {
   cancelOrder as cancelOrderApi,
   confirmReceived,
@@ -15,7 +23,10 @@ import {
   paymentMethodLabels,
   paymentStatusLabels,
 } from '../../services/orderService'
+import { getReviewsByUser, mapReviewFromApi } from '../../services/reviewService'
+import { updateUser as updateUserProfile } from '../../services/userService'
 import { getCurrentUser, getCurrentUserId, logout, normalizeUser } from '../../utils/authStorage'
+import { getImageUrl, handleImageError } from '../../utils/imageUtils'
 import './ProfilePage.css'
 
 const accountTabs = [
@@ -32,6 +43,8 @@ const normalizeMockUser = (user) => ({
   ...user,
   name: user.name || user.hoTen || '',
   phone: user.phone || user.soDienThoai || '',
+  diaChi: user.diaChi || user.address || '',
+  address: user.diaChi || user.address || '',
   role: user.role || user.vaiTro || 'khachhang',
   loyaltyPoints: Number(user.loyaltyPoints || user.diemTichLuy || 0),
   customerType: user.customerType || user.phanLoaiKhachHang || 'Thân thiết',
@@ -45,6 +58,60 @@ const normalizeMockOrder = (order) => ({
   total: order.total ?? order.items.reduce((sum, item) => sum + item.price * item.quantity, 0) + order.shippingFee - order.discount,
 })
 const fallbackOrders = mockOrders.map(normalizeMockOrder)
+const fallbackCombos = mockPurchasedCombos.map((combo) =>
+  mapComboFromApi({
+    maCombo: combo.id,
+    tenCombo: combo.name,
+    loaiCombo: combo.type || '',
+    dipLe: combo.occasion,
+    loiNhan: combo.message,
+    trangThaiCombo:
+      combo.status === 'Đã mua' || combo.status === 'Đã mua'
+        ? 'daDatHang'
+        : combo.status === 'Đã hủy'
+          ? 'daHuy'
+          : 'luuTam',
+    tongTien: combo.total,
+    ngayTao: combo.createdAt || '',
+    items: (combo.products || []).map((product, index) => ({
+      maChiTietCombo: `${combo.id}-${index}`,
+      tenSanPham: product,
+      soLuong: 1,
+      donGia: 0,
+    })),
+  }),
+)
+const fallbackReviews = mockOrders.flatMap((order) =>
+  (order.items || [])
+    .filter((item) => item.reviewContent || item.noiDungDanhGia)
+    .map((item) =>
+      mapReviewFromApi({
+        maChiTietDonHang: item.maChiTietDonHang ?? item.id,
+        maDonHang: order.id,
+        maNguoiDung: mockCurrentUser.id,
+        hoTenNguoiDung: mockCurrentUser.name,
+        tenSanPham: item.name,
+        hinhAnhSanPham: item.image,
+        tenBienThe: item.variant,
+        soSao: item.rating || 5,
+        noiDungDanhGia: item.reviewContent || item.noiDungDanhGia,
+        ngayDanhGia: item.reviewDate || item.ngayDanhGia || order.orderDate,
+        daKiemDuyetDanhGia: item.daKiemDuyetDanhGia ?? item.reviewApproved ?? false,
+      }),
+    ),
+)
+
+const formatDate = (value) => {
+  if (!value) return 'Đang cập nhật'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('vi-VN')
+}
+
+const renderStars = (rating) => '★'.repeat(Math.max(0, Math.min(5, Number(rating || 0))))
+
+const ReviewImage = ({ value, label }) => (
+  <img src={getImageUrl(value)} alt={label || 'Sản phẩm'} onError={handleImageError} />
+)
 
 function ProfilePage() {
   const navigate = useNavigate()
@@ -56,9 +123,27 @@ function ProfilePage() {
   const [isOrdersLoading, setIsOrdersLoading] = useState(false)
   const [hasOrdersApiError, setHasOrdersApiError] = useState(false)
   const [ordersError, setOrdersError] = useState('')
+  const [reviews, setReviews] = useState(fallbackReviews)
+  const [isReviewsLoading, setIsReviewsLoading] = useState(false)
+  const [hasReviewsApiError, setHasReviewsApiError] = useState(false)
+  const [reviewsError, setReviewsError] = useState('')
+  const [combos, setCombos] = useState(fallbackCombos)
+  const [isCombosLoading, setIsCombosLoading] = useState(false)
+  const [hasCombosApiError, setHasCombosApiError] = useState(false)
+  const [combosError, setCombosError] = useState('')
   const [cancelTargetOrder, setCancelTargetOrder] = useState(null)
   const [cancelReason, setCancelReason] = useState('')
   const [selectedCombo, setSelectedCombo] = useState(null)
+  const [profileForm, setProfileForm] = useState({
+    name: profileUser.name || '',
+    email: profileUser.email || '',
+    phone: profileUser.phone || '',
+    birthday: profileUser.birthday || '',
+    diaChi: profileUser.diaChi || profileUser.address || '',
+  })
+  const [isProfileSaving, setIsProfileSaving] = useState(false)
+  const [profileMessage, setProfileMessage] = useState('')
+  const [profileError, setProfileError] = useState('')
 
   const loadOrders = useCallback(async (status = orderFilter) => {
     const maNguoiDung = getCurrentUserId()
@@ -108,6 +193,16 @@ function ProfilePage() {
   }, [navigate])
 
   useEffect(() => {
+    setProfileForm({
+      name: profileUser.name || '',
+      email: profileUser.email || '',
+      phone: profileUser.phone || '',
+      birthday: profileUser.birthday || '',
+      diaChi: profileUser.diaChi || profileUser.address || '',
+    })
+  }, [profileUser])
+
+  useEffect(() => {
     if (activeTab !== 'orders') {
       return undefined
     }
@@ -120,6 +215,74 @@ function ProfilePage() {
       window.clearTimeout(loadTimer)
     }
   }, [activeTab, loadOrders])
+
+  useEffect(() => {
+    if (activeTab !== 'reviews') {
+      return undefined
+    }
+
+    const loadTimer = window.setTimeout(async () => {
+      const maNguoiDung = getCurrentUserId()
+
+      if (!maNguoiDung) {
+        navigate('/login?redirect=/profile')
+        return
+      }
+
+      setIsReviewsLoading(true)
+      setReviewsError('')
+
+      try {
+        const apiReviews = await getReviewsByUser(maNguoiDung)
+        setReviews(apiReviews)
+        setHasReviewsApiError(false)
+      } catch (error) {
+        setReviews(fallbackReviews)
+        setHasReviewsApiError(true)
+        setReviewsError(error?.message || '')
+      } finally {
+        setIsReviewsLoading(false)
+      }
+    }, 0)
+
+    return () => {
+      window.clearTimeout(loadTimer)
+    }
+  }, [activeTab, navigate])
+
+  useEffect(() => {
+    if (activeTab !== 'combos') {
+      return undefined
+    }
+
+    const loadTimer = window.setTimeout(async () => {
+      const maNguoiDung = getCurrentUserId()
+
+      if (!maNguoiDung) {
+        navigate('/login?redirect=/profile')
+        return
+      }
+
+      setIsCombosLoading(true)
+      setCombosError('')
+
+      try {
+        const apiCombos = await getCombosByUser(maNguoiDung)
+        setCombos(apiCombos)
+        setHasCombosApiError(false)
+      } catch (error) {
+        setCombos(fallbackCombos)
+        setHasCombosApiError(true)
+        setCombosError(error?.message || '')
+      } finally {
+        setIsCombosLoading(false)
+      }
+    }, 0)
+
+    return () => {
+      window.clearTimeout(loadTimer)
+    }
+  }, [activeTab, navigate])
 
   const filteredOrders = useMemo(() => {
     if (orderFilter === 'all') {
@@ -202,6 +365,102 @@ function ProfilePage() {
   const handleLogout = () => {
     logout()
     navigate('/login')
+  }
+
+  const updateProfileField = (field, value) => {
+    setProfileForm((current) => ({ ...current, [field]: value }))
+    setProfileMessage('')
+    setProfileError('')
+  }
+
+  const saveProfile = async (event) => {
+    event.preventDefault()
+    const maNguoiDung = getCurrentUserId()
+
+    if (!maNguoiDung) {
+      navigate('/login?redirect=/profile')
+      return
+    }
+
+    setIsProfileSaving(true)
+    setProfileMessage('')
+    setProfileError('')
+
+    try {
+      const updatedUser = await updateUserProfile(maNguoiDung, {
+        hoTen: profileForm.name.trim(),
+        email: profileForm.email.trim(),
+        soDienThoai: profileForm.phone.trim(),
+        ngaySinh: profileForm.birthday || null,
+        diaChi: profileForm.diaChi.trim(),
+      })
+      const normalizedUpdatedUser = normalizeUser(updatedUser)
+      setProfileUser(normalizedUpdatedUser)
+      localStorage.setItem('dacsan_user', JSON.stringify(normalizedUpdatedUser))
+      window.dispatchEvent(new Event('auth-changed'))
+      setProfileMessage('Đã cập nhật thông tin cá nhân.')
+    } catch (error) {
+      setProfileError(error?.message || 'Không thể cập nhật thông tin cá nhân.')
+    } finally {
+      setIsProfileSaving(false)
+    }
+  }
+
+  const loadComboDetail = async (combo) => {
+    setSelectedCombo(combo)
+
+    try {
+      setSelectedCombo(await getComboById(combo.id))
+    } catch (error) {
+      setCombosError(error?.message || 'Không thể tải chi tiết combo.')
+    }
+  }
+
+  const orderComboNow = async (combo) => {
+    const maNguoiDung = getCurrentUserId()
+
+    if (!maNguoiDung) {
+      navigate('/login?redirect=/profile')
+      return
+    }
+
+    setIsCombosLoading(true)
+    setCombosError('')
+
+    try {
+      const detailCombo = combo.items?.length > 0 ? combo : await getComboById(combo.id)
+      const comboItems = detailCombo.items || []
+
+      if (comboItems.length === 0) {
+        setCombosError('Combo chưa có sản phẩm.')
+        return
+      }
+
+      if (!window.confirm('Bạn muốn đưa combo này vào giỏ hàng và chuyển sang thanh toán?')) {
+        return
+      }
+
+      try {
+        await clearCart(maNguoiDung)
+      } catch {
+        setCombosError('Hệ thống đang bận, vui lòng thử lại.')
+        return
+      }
+
+      for (const item of comboItems) {
+        await addToCart({
+          maNguoiDung,
+          maBienThe: item.maBienThe || item.variantId,
+          soLuong: item.soLuong || item.quantity,
+        })
+      }
+      setPendingCombo(detailCombo)
+      navigate('/checkout')
+    } catch (error) {
+      setCombosError(error?.message || 'Không thể đưa combo vào giỏ hàng.')
+    } finally {
+      setIsCombosLoading(false)
+    }
   }
 
   const renderInfo = () => (
@@ -368,9 +627,36 @@ function ProfilePage() {
       <div className="address-card">
         <strong>{profileUser.name || 'Khách hàng demo'}</strong>
         <p>{profileUser.phone || 'Đang cập nhật'}</p>
-        <p>{profileUser.address || profileUser.diaChi || 'Đang cập nhật'}</p>
+        <p>{profileUser.diaChi || profileUser.address || 'Đang cập nhật'}</p>
         <span>Mặc định</span>
       </div>
+      <form className="profile-edit-form" onSubmit={saveProfile}>
+        <label>
+          Họ và tên
+          <input value={profileForm.name} onChange={(event) => updateProfileField('name', event.target.value)} />
+        </label>
+        <label>
+          Email
+          <input value={profileForm.email} onChange={(event) => updateProfileField('email', event.target.value)} />
+        </label>
+        <label>
+          Số điện thoại
+          <input value={profileForm.phone} onChange={(event) => updateProfileField('phone', event.target.value)} />
+        </label>
+        <label>
+          Ngày sinh
+          <input type="date" value={profileForm.birthday || ''} onChange={(event) => updateProfileField('birthday', event.target.value)} />
+        </label>
+        <label className="profile-edit-full">
+          Địa chỉ mặc định
+          <input value={profileForm.diaChi} onChange={(event) => updateProfileField('diaChi', event.target.value)} />
+        </label>
+        {profileError ? <p className="form-error profile-edit-full">{profileError}</p> : null}
+        {profileMessage ? <p className="form-success profile-edit-full">{profileMessage}</p> : null}
+        <button className="button profile-edit-full" type="submit" disabled={isProfileSaving}>
+          {isProfileSaving ? 'Đang lưu...' : 'Lưu thông tin'}
+        </button>
+      </form>
     </section>
   )
 
@@ -391,10 +677,41 @@ function ProfilePage() {
         <span>Phản hồi</span>
         <h2>Đánh giá của tôi</h2>
       </div>
-      <div className="review-card">
-        <strong>Mực rim me Đà Nẵng</strong>
-        <p>Vị vừa miệng, đóng gói chắc chắn. Sẽ mua lại cho dịp lễ.</p>
-        <span>5/5 sao</span>
+
+      {isReviewsLoading ? <p className="product-result-summary">Đang tải đánh giá...</p> : null}
+      {hasReviewsApiError ? (
+        <p className="product-result-summary">
+          Không kết nối được backend, đang dùng dữ liệu mẫu nếu có.
+        </p>
+      ) : null}
+      {reviewsError && !hasReviewsApiError ? <p className="form-error">{reviewsError}</p> : null}
+
+      <div className="profile-review-list">
+        {reviews.map((review) => (
+          <article className="review-card profile-review-card" key={review.id || `${review.productName}-${review.reviewDate}`}>
+            <div className="review-product-image">
+              <ReviewImage value={review.productImage} label={review.productName} />
+            </div>
+            <div className="profile-review-main">
+              <div className="profile-review-title">
+                <strong>{review.productName}</strong>
+                <span className={`review-status-badge ${review.approved ? 'approved' : 'pending'}`}>
+                  {review.approved ? 'Đã duyệt' : 'Chờ duyệt'}
+                </span>
+              </div>
+              <small>{review.variantName || review.variant || 'Mặc định'}</small>
+              <b>{renderStars(review.rating)} <small>{Number(review.rating || 0)}/5</small></b>
+              <p>{review.content || 'Không có nội dung đánh giá.'}</p>
+              <time>{formatDate(review.reviewDate)}</time>
+            </div>
+          </article>
+        ))}
+
+        {reviews.length === 0 && !isReviewsLoading ? (
+          <section className="empty-products">
+            <h2>Bạn chưa có đánh giá nào.</h2>
+          </section>
+        ) : null}
       </div>
     </section>
   )
@@ -403,33 +720,49 @@ function ProfilePage() {
     <section className="profile-panel">
       <div className="profile-panel-heading">
         <span>Quà tặng</span>
-        <h2>Combo quà tặng</h2>
+        <h2>Combo của tôi</h2>
       </div>
 
+      {isCombosLoading ? <p className="product-result-summary">Đang tải combo...</p> : null}
+      {hasCombosApiError ? (
+        <p className="product-result-summary">
+          Không kết nối được backend combo, đang dùng dữ liệu mẫu nếu có.
+        </p>
+      ) : null}
+      {combosError && !hasCombosApiError ? <p className="form-error">{combosError}</p> : null}
+
       <div className="profile-combo-grid">
-        {mockPurchasedCombos.map((combo) => (
+        {combos.map((combo) => (
           <article className="profile-combo-card" key={combo.id}>
             <div className="profile-combo-head">
               <div>
                 <span>{combo.occasion}</span>
                 <h3>{combo.name}</h3>
               </div>
-              <b>{combo.status}</b>
+              <b>{comboStatusLabels[combo.trangThaiCombo] || combo.trangThaiCombo}</b>
             </div>
             <p>{combo.message}</p>
+            <p>{combo.loaiCombo || combo.type || 'Combo quà tặng'}</p>
+            {combo.createdAt ? <p>Ngày tạo: {formatDate(combo.createdAt)}</p> : null}
             <ul>
-              {combo.products.slice(0, 3).map((product) => (
-                <li key={product}>{product}</li>
+              {(combo.items || []).slice(0, 3).map((item) => (
+                <li key={item.id}>{item.name} x {item.quantity}</li>
               ))}
             </ul>
-            <div className="profile-combo-footer">
-              <strong>{formatCurrency(combo.total)}</strong>
-              <button type="button" onClick={() => setSelectedCombo(combo)}>
-                Xem chi tiết
+            {combo.trangThaiCombo === 'luuTam' ? (
+              <button type="button" onClick={() => orderComboNow(combo)}>
+                Đặt ngay
               </button>
-            </div>
+            ) : null}
+            {combo.trangThaiCombo === 'daDatHang' ? <p>Đã đặt hàng</p> : null}
+            {combo.trangThaiCombo === 'daHuy' ? <p>Đã hủy</p> : null}
           </article>
         ))}
+        {combos.length === 0 && !isCombosLoading ? (
+          <section className="empty-products">
+            <h2>Bạn chưa có combo nào.</h2>
+          </section>
+        ) : null}
       </div>
     </section>
   )
@@ -505,13 +838,15 @@ function ProfilePage() {
         <div className="profile-modal-backdrop" role="presentation">
           <div className="profile-modal">
             <div className="profile-panel-heading">
-              <span>{selectedCombo.status}</span>
+              <span>{comboStatusLabels[selectedCombo.trangThaiCombo] || selectedCombo.trangThaiCombo}</span>
               <h2>{selectedCombo.name}</h2>
             </div>
             <p>{selectedCombo.message}</p>
+            <p>{selectedCombo.loaiCombo || selectedCombo.type}</p>
+            <p>{selectedCombo.occasion}</p>
             <div className="combo-detail-list">
-              {selectedCombo.products.map((product) => (
-                <span key={product}>{product}</span>
+              {(selectedCombo.items || []).map((item) => (
+                <span key={item.id}>{item.name} · {item.variantName} x {item.quantity}</span>
               ))}
             </div>
             <strong>Tổng tiền: {formatCurrency(selectedCombo.total)}</strong>
@@ -519,6 +854,11 @@ function ProfilePage() {
               <button type="button" onClick={() => setSelectedCombo(null)}>
                 Đóng
               </button>
+              {selectedCombo.trangThaiCombo === 'luuTam' ? (
+                <button className="button" type="button" onClick={() => orderComboNow(selectedCombo)}>
+                  Đặt ngay
+                </button>
+              ) : null}
             </div>
           </div>
         </div>

@@ -110,6 +110,8 @@
 .product-management-table-card {
   display: grid;
   gap: 14px;
+  min-width: 0;
+  overflow: hidden;
   padding: 18px;
 }
 
@@ -251,11 +253,14 @@
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .product-actions button {
   min-height: 34px;
   padding: 0 10px;
+  max-width: 100%;
   color: var(--color-red);
   background: #fff;
   border: 1px solid var(--color-border);
@@ -263,6 +268,7 @@
   cursor: pointer;
   font-size: 13px;
   font-weight: 900;
+  white-space: nowrap;
 }
 
 .product-actions button:hover {

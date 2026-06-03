@@ -36,6 +36,22 @@ public class DanhMucServiceImpl implements DanhMucService {
     }
 
     @Override
+    public List<DanhMucResponse> getManageCategories() {
+        return danhMucRepository.findAllByOrderByThuTuHienThiAsc()
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Override
+    public DanhMucResponse getManageCategoryById(Integer id) {
+        DanhMuc danhMuc = danhMucRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Khong tim thay danh muc voi ma: " + id));
+
+        return toResponse(danhMuc);
+    }
+
+    @Override
     public List<DanhMucResponse> getRootCategories() {
         return danhMucRepository.findByDanhMucChaIsNullAndTrangThaiTrueOrderByThuTuHienThiAsc()
                 .stream()
@@ -129,6 +145,7 @@ public class DanhMucServiceImpl implements DanhMucService {
         danhMuc.setDanhMucCha(danhMucCha);
         danhMuc.setTenDanhMuc(request.getTenDanhMuc().trim());
         danhMuc.setMoTa(request.getMoTa());
+        danhMuc.setHinhAnh(request.getHinhAnh());
         danhMuc.setThuTuHienThi(request.getThuTuHienThi());
     }
 
@@ -148,6 +165,7 @@ public class DanhMucServiceImpl implements DanhMucService {
                 maDanhMucCha,
                 danhMuc.getTenDanhMuc(),
                 danhMuc.getMoTa(),
+                danhMuc.getHinhAnh(),
                 danhMuc.getThuTuHienThi(),
                 danhMuc.getTrangThai(),
                 soSanPham,

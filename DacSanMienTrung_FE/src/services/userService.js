@@ -87,6 +87,8 @@ export const mapUserFromApi = (apiUser = {}) => {
     email: user.email ?? '',
     phone: user.soDienThoai ?? user.phone ?? '',
     birthday: user.ngaySinh ?? user.birthday ?? '',
+    diaChi: user.diaChi ?? user.address ?? '',
+    address: user.diaChi ?? user.address ?? '',
     role,
     roleLabel: roleLabels[role] ?? role,
     status,
